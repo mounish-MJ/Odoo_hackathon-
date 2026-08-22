@@ -1,4 +1,4 @@
-# HR Core API Contract Specification (Phase 1, 2 & 3)
+# HR Core API Contract Specification (Phase 1, 2, 3 & 4)
 
 All endpoints return structured JSON responses.
 
@@ -8,11 +8,11 @@ All endpoints return structured JSON responses.
 
 ### `GET /api/v1/health`
 - **Authentication**: None
-- **Description**: Returns overall application health.
+- **Description**: Returns overall application health status.
 
 ### `GET /api/v1/health/db`
 - **Authentication**: None
-- **Description**: Checks database connection health.
+- **Description**: Checks PostgreSQL database connection health.
 
 ---
 
@@ -24,7 +24,7 @@ All endpoints return structured JSON responses.
 
 ### `POST /api/v1/auth/verify-email`
 - **Authentication**: None
-- **Description**: Verifies email address using token.
+- **Description**: Verifies email address using token stub.
 
 ### `POST /api/v1/auth/login`
 - **Authentication**: None
@@ -40,12 +40,10 @@ All endpoints return structured JSON responses.
 
 ### `GET /api/v1/employees/me`
 - **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
-- **Role**: All verified roles
 - **Description**: Returns the authenticated user's own employee profile details.
 
 ### `PATCH /api/v1/employees/me`
 - **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
-- **Role**: All verified roles
 - **Description**: Self-service profile update. Allows updating `phone`. Rejects attempts to edit restricted fields (`salary`, `role`, `department`, `designation`, `employment_status`) with HTTP 422.
 
 ### `GET /api/v1/employees/{employee_id}`
@@ -107,3 +105,48 @@ All endpoints return structured JSON responses.
 - **Role**: `HR`, `ADMIN`
 - **Request Body**: `{"review_comment": "Rejected due to overlap"}`
 - **Description**: Rejects a `PENDING` leave request. Records reviewer ID, review timestamp, and comments. Returns HTTP 409 if request is not in `PENDING` state.
+
+---
+
+## 6. Payroll APIs
+
+### `GET /api/v1/payroll`
+- **Authentication**: Bearer JWT
+- **Role**: Self or `HR`/`ADMIN`
+- **Query Parameters**: `pay_period` (YYYY-MM), `employee_id` (defaults to self for employees).
+- **Description**: Retrieves payroll records. Employees can only view their own payroll records. Employee A attempting to view Employee B's payroll returns HTTP 403 Forbidden.
+
+### `GET /api/v1/payroll/{payroll_id}`
+- **Authentication**: Bearer JWT
+- **Role**: Self or `HR`/`ADMIN`
+- **Description**: Retrieves detailed payroll record by ID. Enforces server-side employee isolation (`enforce_self_or_admin`).
+
+### `POST /api/v1/payroll`
+- **Authentication**: Bearer JWT
+- **Role**: `HR`, `ADMIN`
+- **Request Body**: `{"employee_id": "...", "pay_period": "2026-08", "basic_salary": "5000.00", "allowances": "1000.00", "deductions": "500.00", "currency": "USD"}`
+- **Description**: Creates a new payroll record. Calculates `gross_salary = basic_salary + allowances` and `net_salary = gross_salary - deductions` using `Decimal` precision.
+
+### `PATCH /api/v1/payroll/{payroll_id}`
+- **Authentication**: Bearer JWT
+- **Role**: `HR`, `ADMIN`
+- **Request Body**: `{"basic_salary": "5500.00", "allowances": "1200.00", "deductions": "600.00"}`
+- **Description**: Updates an existing payroll record and recalculates gross and net salaries.
+
+---
+
+## 7. Future AI Tool Exposure Candidate Specifications
+
+The following operations are exposed via clean Service Layer methods for future AI Tool/Agent integration:
+
+| Candidate Tool | Operation Type | Required Role | Ownership Enforced | Side Effects |
+|---|---|---|---|---|
+| `get_employee_profile` | READ | Verified Roles | Self / HR / Admin | None |
+| `get_attendance` | READ | Verified Roles | Self / HR / Admin | None |
+| `get_weekly_attendance` | READ | Verified Roles | Self / HR / Admin | None |
+| `get_leave_requests` | READ | Verified Roles | Self / HR / Admin | None |
+| `apply_leave` | WRITE | Verified Roles | Self (from JWT) | Creates `PENDING` leave request |
+| `approve_leave` | WRITE | `HR`, `ADMIN` | HR / Admin | Transitions `PENDING -> APPROVED` |
+| `reject_leave` | WRITE | `HR`, `ADMIN` | HR / Admin | Transitions `PENDING -> REJECTED` |
+| `get_payroll` | READ | Verified Roles | Self / HR / Admin | None |
+| `create_payroll` | WRITE | `HR`, `ADMIN` | HR / Admin | Creates payroll record |

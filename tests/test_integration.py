@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from app.models.user import User, UserRole
 from app.models.employee import Employee, EmploymentStatus
 from app.core.security import hash_password
@@ -6,7 +7,7 @@ from app.core.security import hash_password
 
 def test_full_integration_user_workflow(client, db_session):
     """
-    Executes complete end-to-end HR integration workflow:
+    Executes complete end-to-end HR integration workflow across Phase 1, 2, 3 & 4:
     1. Login & acquire JWT
     2. View Employee Profile
     3. Perform Check-in
@@ -16,6 +17,8 @@ def test_full_integration_user_workflow(client, db_session):
     7. Apply for Leave
     8. HR Login & view pending leave requests
     9. HR approves leave request
+    10. HR creates Payroll record for employee
+    11. Employee views own Payroll record
     """
     default_pwd = hash_password("Integration123!")
 
@@ -124,3 +127,25 @@ def test_full_integration_user_workflow(client, db_session):
     approve_resp = client.patch(f"/api/v1/leaves/{leave_id}/approve", json={"review_comment": "Approved by integration test"}, headers=hr_headers)
     assert approve_resp.status_code == 200
     assert approve_resp.json()["status"] == "APPROVED"
+
+    # Step 10: HR Creates Payroll for Employee
+    payroll_payload = {
+        "employee_id": emp.id,
+        "pay_period": "2026-08",
+        "basic_salary": "7500.00",
+        "allowances": "1500.00",
+        "deductions": "1000.00",
+        "currency": "USD"
+    }
+    payroll_resp = client.post("/api/v1/payroll", json=payroll_payload, headers=hr_headers)
+    assert payroll_resp.status_code == 201
+    assert Decimal(str(payroll_resp.json()["gross_salary"])) == Decimal("9000.00")
+    assert Decimal(str(payroll_resp.json()["net_salary"])) == Decimal("8000.00")
+
+    # Step 11: Employee Views Own Payroll Record
+    emp_payroll_resp = client.get("/api/v1/payroll", headers=emp_headers)
+    assert emp_payroll_resp.status_code == 200
+    records = emp_payroll_resp.json()
+    assert len(records) == 1
+    assert records[0]["pay_period"] == "2026-08"
+    assert Decimal(str(records[0]["net_salary"])) == Decimal("8000.00")
