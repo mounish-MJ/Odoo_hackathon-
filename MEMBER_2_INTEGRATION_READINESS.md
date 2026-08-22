@@ -1,67 +1,71 @@
-# Final Integration Readiness Report — DAYFLOW Member 2 AI Engine
+# Integration Readiness & Contract Report — DAYFLOW Member 2 AI Engine
 
 **Role:** Member 2 — AI Intelligence + Decision Engineer  
 **Project:** DAYFLOW — Intelligent HR Operating System  
 **Date:** August 22, 2026  
-**Member 1 Base URL:** `http://localhost:3000`  
-**Overall Integration Status:** 🟡 **ADAPTER VERIFIED / LIVE SERVER BLOCKED**
+**Configured Member 1 Base URL:** `http://localhost:8000/api/v1`  
+**Integration Status:** 🟡 **ADAPTER VERIFIED / LIVE SERVER UNREACHABLE**
 
 ---
 
-## 1. Integration Status Summary
+## 1. Executive Summary
 
-| Workstream Integration | Status | Detail & Verification |
-| :--- | :--- | :--- |
-| **Member 1 (HR Core)** | 🟡 **ADAPTER VERIFIED** | Wrapped via `Member1APIAdapter` (`src/adapters/member1_adapter.py`) with HTTP error handlers (400, 401, 403, 409, 500). |
-| **Member 3 (Frontend UX)** | 🟢 **CONTRACT VERIFIED** | `MEMBER_2_MEMBER_3_CONTRACT.md` authored with exact JSON schemas (`ai_suggested: true`, `suggested_action`). |
-| **Member 4 (Platform Audit)** | 🟢 **CONTRACT VERIFIED** | `MEMBER_2_MEMBER_4_AUDIT_CONTRACT.md` authored with exact actor metadata (`actor.type`, `actor.request_id`). |
-| **Security Architecture** | 🟢 **PASS / ENFORCED** | Zero Member 1 DB access, fail-closed DB, JWT auth, prompt injection guardrails, 2-step write confirmation. |
-| **Test Suite** | 🟢 **32/32 PASSED** | 100% pass rate across unit, integration, security, and failure mode tests in 0.35s. |
-| **Live API Server** | 🔴 **BLOCKED** | `LIVE INTEGRATION BLOCKED — MEMBER 1 API UNAVAILABLE` (Server offline on `http://localhost:3000`). |
+Member 2's `Member1APIAdapter` (`src/adapters/member1_adapter.py`) has been updated and aligned with Member 1's actual FastAPI REST specification:
+- **Authentication:** `POST /api/v1/auth/login` (JWT Bearer Token flow)
+- **Employee Endpoint:** `GET /api/v1/employees/me` & `GET /api/v1/employees/{employee_id}`
+- **Leaves Endpoint:** `GET /api/v1/leaves` & `POST /api/v1/leaves` (`HTTP 201 Created`, Enum mapping: `ANNUAL`, `SICK`, `CASUAL`, `MATERNITY`, `PATERNITY`, `UNPAID`)
+- **Attendance Endpoint:** `GET /api/v1/attendance/daily` & `GET /api/v1/attendance/weekly`
+- **Payroll Endpoint:** `GET /api/v1/payroll?pay_period=YYYY-MM`
+- **Member 4 Audit Headers:** `X-Request-ID`, `X-Actor-ID`, `X-Actor-Type`
 
 ---
 
-## 2. Member 1 API Integration Inventory
+## 2. Configuration & Credentials
 
-| API Endpoint | Method | Member 2 Tool / Adapter Method | Auth | Integration Status |
+Configured in `src/config.py`:
+- `MEMBER1_API_BASE_URL`: `http://localhost:8000/api/v1` (Overridable via `os.getenv("MEMBER1_API_BASE_URL")`)
+- `MEMBER1_TEST_EMAIL`: Loaded safely from `os.getenv("MEMBER1_TEST_EMAIL")`
+- `MEMBER1_TEST_PASSWORD`: Loaded safely from `os.getenv("MEMBER1_TEST_PASSWORD")`
+
+---
+
+## 3. Member 1 API Contract Alignment Matrix
+
+| Operation | Member 1 Endpoint | Method | Member 2 Adapter Method | Contract Mismatch Resolution |
 | :--- | :--- | :--- | :--- | :--- |
-| `/api/v1/employees/:id` | GET | `member1_adapter.get_employee_profile()` | Bearer Token | 🟡 **ADAPTER VERIFIED** |
-| `/api/v1/leaves/balances` | GET | `member1_adapter.get_leave_balances()` | Bearer Token | 🟡 **ADAPTER VERIFIED** |
-| `/api/v1/attendance/summary` | GET | `member1_adapter.get_attendance_summary()` | Bearer Token | 🟡 **ADAPTER VERIFIED** |
-| `/api/v1/payroll/summary` | GET | `member1_adapter.get_payroll_summary()` | Bearer Token | 🟡 **ADAPTER VERIFIED** |
-| `/api/v1/leaves/request` | POST | `member1_adapter.create_leave_request()` | Bearer Token | 🟡 **ADAPTER VERIFIED** |
+| **Health Check** | `/api/v1/health` | GET | `is_live_api_available()` | Aligned to `/api/v1/health` |
+| **Authentication** | `/api/v1/auth/login` | POST | `login(email, password)` | Implemented JWT token caching |
+| **Current Employee**| `/api/v1/employees/me` | GET | `get_current_employee()` | Mapped `id` to `user_id` |
+| **Employee by ID** | `/api/v1/employees/{id}` | GET | `get_employee_by_id(id)` | Handled 403 Forbidden |
+| **List Leaves** | `/api/v1/leaves` | GET | `get_leave_balances(user_id)` | Mapped leave list to balance summary |
+| **Create Leave** | `/api/v1/leaves` | POST | `create_leave_request()` | Mapped `PAID` -> `ANNUAL`, returning 201 |
+| **Daily Attendance** | `/api/v1/attendance/daily` | GET | `get_daily_attendance(date)` | Aligned query `date=YYYY-MM-DD` |
+| **Weekly Attendance**| `/api/v1/attendance/weekly` | GET | `get_weekly_attendance(ref_date)`| Aligned `total_days_present` |
+| **Payroll Summary** | `/api/v1/payroll` | GET | `get_payroll_summary(pay_period)`| Aligned `pay_period=YYYY-MM` |
 
 ---
 
-## 3. Failure Mode & Error Handling Verification
-
-The `Member1APIAdapter` and service pipeline explicitly map and handle all downstream error conditions:
-
-| Scenario | Tested Result | Code Behavior |
-| :--- | :--- | :--- |
-| **Member 1 Unreachable** | PASSED | Falls back cleanly to isolated test fixture with clear log notice (`[MEMBER 1 ADAPTER: TEST FIXTURE MODE]`). |
-| **HTTP 400 (Bad Request)** | PASSED | Maps to `{ "status": "ERROR", "error_code": "BAD_REQUEST" }`. |
-| **HTTP 401 (Unauthorized)** | PASSED | Maps to `{ "status": "ERROR", "error_code": "UNAUTHORIZED" }`. |
-| **HTTP 403 (Forbidden)** | PASSED | Maps to `{ "status": "ERROR", "error_code": "FORBIDDEN" }`. |
-| **HTTP 409 (Duplicate)** | PASSED | Maps to `{ "status": "ERROR", "error_code": "DUPLICATE_SUBMISSION" }`. |
-| **HTTP 500 (Server Error)** | PASSED | Maps to `{ "status": "ERROR", "error_code": "SERVER_ERROR" }`. |
-| **Expired Confirmation Token** | PASSED | Returns `ACT_FAILED` with clear expiration notice. |
-
----
-
-## 4. Automated Test Results
+## 4. Test Suite Execution (40/40 Passed)
 
 ```bash
 python3 -m pytest tests/ -v
 ```
 
 ```
-======================== 32 passed in 0.35s =========================
+======================== 40 passed in 0.33s =========================
 ```
+
+### Verified Test Categories:
+- **Unit & Domain Tests:** 24 passed
+- **Member 1 Adapter REST Operations Tests:** 8 passed (`login`, `me`, `employee_by_id`, `leaves`, `create 201`, `daily attendance`, `weekly attendance`, `payroll`)
+- **Failure Handling Tests:** 8 passed (`400 INVALID_DATE_RANGE`, `401 Unauthorized`, `403 Forbidden`, `422 Validation Error`, `500 Server Error`, missing token)
 
 ---
 
-## 5. Next Actions
+## 5. Live Reachability Check Result
 
-1. **Member 1 Action:** Start live HR Core REST server process on `http://localhost:3000`.
-2. **Member 2 Action:** Execute live HTTP integration test against running Member 1 REST server.
+```
+MEMBER 1 UNREACHABLE — CONNECTION REFUSED ON http://localhost:8000/api/v1/health
+```
+
+*Member 1's FastAPI server process is currently not running on port 8000. Live end-to-end HTTP request execution requires starting Member 1's Uvicorn server process.*

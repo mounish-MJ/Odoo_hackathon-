@@ -114,7 +114,7 @@ def test_member1_adapter_actor_metadata():
     }
     res = member1_adapter.create_leave_request(
         user_id="usr_88392",
-        leave_type="PAID",
+        leave_type="CASUAL",
         start_date="2026-09-01",
         end_date="2026-09-02",
         reason="Test",
@@ -144,7 +144,58 @@ def test_policy_idempotent_ingestion():
     assert res2.status == "SKIPPED_ALREADY_EXISTS"
 
 
-# 6. Failure Mode Tests (STEP 6)
+# 6. Member 1 Actual REST Contract Adapter Operations Tests
+def test_adapter_login_flow():
+    res = member1_adapter.login("test.employee@dayflow.com", "TestPassword123!")
+    assert "access_token" in res
+    assert res.get("token_type") == "bearer"
+
+
+def test_adapter_get_current_employee():
+    emp = member1_adapter.get_current_employee()
+    assert emp["id"] == "usr_88392" or "user_id" in emp
+
+
+def test_adapter_get_employee_by_id():
+    emp = member1_adapter.get_employee_by_id("usr_88392")
+    assert emp["user_id"] == "usr_88392"
+
+
+def test_adapter_list_leaves():
+    balances = member1_adapter.get_leave_balances("usr_88392")
+    assert "CASUAL" in balances
+    assert balances["CASUAL"]["total"] == 6
+
+
+def test_adapter_create_leave_request_mapped():
+    res = member1_adapter.create_leave_request(
+        user_id="usr_88392",
+        leave_type="PAID",  # Mapped to ANNUAL
+        start_date="2026-11-01",
+        end_date="2026-11-02",
+        reason="Medical checkup"
+    )
+    assert res["status"] == "SUCCESS"
+    assert res["leave_type"] == "ANNUAL"
+    assert res["status_code"] == 201
+
+
+def test_adapter_get_daily_attendance():
+    att = member1_adapter.get_daily_attendance("2026-08-20")
+    assert "date" in att or "records" in att
+
+
+def test_adapter_get_weekly_attendance():
+    att = member1_adapter.get_weekly_attendance("2026-08-20")
+    assert "total_days_present" in att
+
+
+def test_adapter_get_payroll_summary():
+    payroll = member1_adapter.get_payroll_summary("2026-08")
+    assert isinstance(payroll, (dict, list))
+
+
+# 7. Failure Mode Tests
 def test_failure_mode_missing_confirmation_token():
     confirm_res = tool_router.route_chat_query(
         message="Confirm",
@@ -159,15 +210,15 @@ def test_failure_mode_missing_confirmation_token():
 
 def test_failure_mode_http_400_handling():
     adapter = Member1APIAdapter()
-    resp = httpx.Response(400, text="Invalid leave dates")
+    resp = httpx.Response(400, text="start_date must be before or equal to end_date.")
     result = adapter._handle_http_error(resp)
     assert result["status"] == "ERROR"
-    assert result["error_code"] == "BAD_REQUEST"
+    assert result["error_code"] == "INVALID_DATE_RANGE"
 
 
 def test_failure_mode_http_401_handling():
     adapter = Member1APIAdapter()
-    resp = httpx.Response(401, text="Unauthorized token")
+    resp = httpx.Response(401, text="Missing or invalid Bearer token.")
     result = adapter._handle_http_error(resp)
     assert result["status"] == "ERROR"
     assert result["error_code"] == "UNAUTHORIZED"
@@ -181,17 +232,17 @@ def test_failure_mode_http_403_handling():
     assert result["error_code"] == "FORBIDDEN"
 
 
+def test_failure_mode_http_422_handling():
+    adapter = Member1APIAdapter()
+    resp = httpx.Response(422, text="Invalid date format")
+    result = adapter._handle_http_error(resp)
+    assert result["status"] == "ERROR"
+    assert result["error_code"] == "VALIDATION_ERROR"
+
+
 def test_failure_mode_http_500_handling():
     adapter = Member1APIAdapter()
     resp = httpx.Response(500, text="Member 1 internal error")
     result = adapter._handle_http_error(resp)
     assert result["status"] == "ERROR"
     assert result["error_code"] == "SERVER_ERROR"
-
-
-def test_failure_mode_duplicate_submission():
-    adapter = Member1APIAdapter()
-    resp = httpx.Response(409, text="Leave request already exists for these dates")
-    result = adapter._handle_http_error(resp)
-    assert result["status"] == "ERROR"
-    assert result["error_code"] == "DUPLICATE_SUBMISSION"

@@ -21,6 +21,10 @@ class Settings(BaseModel):
     RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "3"))
     RAG_SIMILARITY_THRESHOLD: float = float(os.getenv("RAG_SIMILARITY_THRESHOLD", "0.60"))
 
+    # Member 1 Core HR REST API Configuration
+    MEMBER1_API_BASE_URL: str = os.getenv("MEMBER1_API_BASE_URL", "http://localhost:8000/api/v1")
+    MEMBER1_TEST_EMAIL: str = os.getenv("MEMBER1_TEST_EMAIL", "test.employee@dayflow.com")
+    MEMBER1_TEST_PASSWORD: str = os.getenv("MEMBER1_TEST_PASSWORD", "TestPassword123!")
+
 
 settings = Settings()
-
