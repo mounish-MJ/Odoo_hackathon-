@@ -15,7 +15,8 @@ from app.models import (
     Employee, EmploymentStatus,
     Attendance, AttendanceStatus,
     LeaveRequest, LeaveType, LeaveStatus,
-    Payroll
+    Payroll,
+    VerificationToken, TokenType
 )
 
 
@@ -57,9 +58,6 @@ def seed_database():
             date_of_joining=date(2023, 3, 1),
             employment_status=EmploymentStatus.FULL_TIME
         )
-        session.add_all([emp_admin, emp_hr])
-        session.flush()
-
         emp_dev = Employee(
             employee_code="EMP003",
             first_name="Charlie",
@@ -69,11 +67,24 @@ def seed_database():
             department="Engineering",
             designation="Senior Software Engineer",
             date_of_joining=date(2023, 6, 15),
-            employment_status=EmploymentStatus.FULL_TIME,
-            manager_id=emp_admin.id
+            employment_status=EmploymentStatus.FULL_TIME
         )
-        session.add(emp_dev)
+        emp_unverified = Employee(
+            employee_code="EMP004",
+            first_name="David",
+            last_name="NewJoiner",
+            email="unverified.emp@company.com",
+            phone="+1-555-0104",
+            department="Marketing",
+            designation="Marketing Specialist",
+            date_of_joining=date(2024, 8, 1),
+            employment_status=EmploymentStatus.PROBATION
+        )
+        session.add_all([emp_admin, emp_hr, emp_dev, emp_unverified])
         session.flush()
+
+        emp_dev.manager_id = emp_admin.id
+        emp_unverified.manager_id = emp_hr.id
 
         # 2. Create Users linked to Employees
         default_password = hash_password("DevPassword123!")
@@ -102,20 +113,38 @@ def seed_database():
             is_verified=True,
             employee_id=emp_dev.id
         )
-        session.add_all([user_admin, user_hr, user_dev])
+        user_unverified = User(
+            email="unverified.emp@company.com",
+            password_hash=default_password,
+            role=UserRole.EMPLOYEE,
+            is_active=True,
+            is_verified=False,
+            employee_id=emp_unverified.id
+        )
+        session.add_all([user_admin, user_hr, user_dev, user_unverified])
         session.flush()
 
         # Link user_id back to Employee profiles
         emp_admin.user_id = user_admin.id
         emp_hr.user_id = user_hr.id
         emp_dev.user_id = user_dev.id
+        emp_unverified.user_id = user_unverified.id
 
-        # 3. Create Attendance History
+        # 3. Create Verification Token for unverified user
+        vtoken = VerificationToken(
+            user_id=user_unverified.id,
+            token="seed_verification_token_12345",
+            token_type=TokenType.EMAIL_VERIFICATION,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+            is_used=False
+        )
+        session.add(vtoken)
+
+        # 4. Create Attendance History
         today = date.today()
         attendance_entries = []
         for days_ago in range(5, 0, -1):
             att_date = today - timedelta(days=days_ago)
-            # Skip weekend
             if att_date.weekday() in (5, 6):
                 continue
             
@@ -130,7 +159,7 @@ def seed_database():
         
         session.add_all(attendance_entries)
 
-        # 4. Create Leave Request
+        # 5. Create Leave Request
         leave_req = LeaveRequest(
             employee_id=emp_dev.id,
             leave_type=LeaveType.ANNUAL,
@@ -144,7 +173,7 @@ def seed_database():
         )
         session.add(leave_req)
 
-        # 5. Create Payroll Records
+        # 6. Create Payroll Records
         pay_period = today.strftime("%Y-%m")
         payroll_dev = Payroll(
             employee_id=emp_dev.id,
