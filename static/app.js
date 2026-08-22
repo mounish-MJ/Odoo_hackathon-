@@ -41,6 +41,13 @@ class ApiClient {
     });
   }
 
+  static async signup(payload) {
+    return ApiClient.request("/api/v1/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  }
+
   static async getProfile() {
     return ApiClient.request("/api/v1/employees/me");
   }
@@ -93,6 +100,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Setup Event Listeners
   document.getElementById("loginForm").addEventListener("submit", handleLogin);
+  const signupForm = document.getElementById("signupForm");
+  if (signupForm) signupForm.addEventListener("submit", handleSignup);
+  
   document.getElementById("leaveForm").addEventListener("submit", handleCreateLeave);
   document.getElementById("btnSendChat").addEventListener("click", handleSendChat);
   document.getElementById("chatInput").addEventListener("keypress", (e) => {
@@ -100,6 +110,53 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("btnLogout").addEventListener("click", handleLogout);
 });
+
+function toggleAuthTab(tab) {
+  const loginForm = document.getElementById("loginForm");
+  const signupForm = document.getElementById("signupForm");
+  const btnSignIn = document.getElementById("tabBtnSignIn");
+  const btnSignUp = document.getElementById("tabBtnSignUp");
+  const alertEl = document.getElementById("loginAlert");
+  const successEl = document.getElementById("loginSuccessAlert");
+
+  if (alertEl) alertEl.style.display = "none";
+  if (successEl) successEl.style.display = "none";
+
+  if (tab === 'signin') {
+    loginForm.style.display = "block";
+    signupForm.style.display = "none";
+    btnSignIn.style.borderBottomColor = "var(--primary-accent)";
+    btnSignIn.style.color = "var(--text-main)";
+    btnSignUp.style.borderBottomColor = "transparent";
+    btnSignUp.style.color = "var(--text-muted)";
+  } else {
+    loginForm.style.display = "none";
+    signupForm.style.display = "block";
+    btnSignUp.style.borderBottomColor = "var(--primary-accent)";
+    btnSignUp.style.color = "var(--text-main)";
+    btnSignIn.style.borderBottomColor = "transparent";
+    btnSignIn.style.color = "var(--text-muted)";
+  }
+}
+
+function fillDemoAccount(role) {
+  const emailInput = document.getElementById("loginEmail");
+  const passInput = document.getElementById("loginPassword");
+
+  if (role === 'employee') {
+    emailInput.value = "test.employee@dayflow.com";
+    passInput.value = "TestPassword123!";
+  } else if (role === 'dev') {
+    emailInput.value = "charlie.dev@company.com";
+    passInput.value = "DevPassword123!";
+  } else if (role === 'hr') {
+    emailInput.value = "hr.bob@company.com";
+    passInput.value = "DevPassword123!";
+  } else if (role === 'admin') {
+    emailInput.value = "admin@company.com";
+    passInput.value = "DevPassword123!";
+  }
+}
 
 function showLoginView() {
   document.getElementById("loginView").style.display = "flex";
@@ -114,7 +171,9 @@ function showAppView() {
 async function handleLogin(e) {
   e.preventDefault();
   const alertEl = document.getElementById("loginAlert");
-  alertEl.style.display = "none";
+  const successEl = document.getElementById("loginSuccessAlert");
+  if (alertEl) alertEl.style.display = "none";
+  if (successEl) successEl.style.display = "none";
 
   const email = document.getElementById("loginEmail").value;
   const password = document.getElementById("loginPassword").value;
@@ -124,8 +183,43 @@ async function handleLogin(e) {
     localStorage.setItem("access_token", res.access_token);
     await initApp();
   } catch (err) {
-    alertEl.textContent = err.message || "Invalid credentials or server unavailable.";
-    alertEl.style.display = "block";
+    if (alertEl) {
+      alertEl.textContent = err.message || "Invalid credentials or server unavailable.";
+      alertEl.style.display = "block";
+    }
+  }
+}
+
+async function handleSignup(e) {
+  e.preventDefault();
+  const alertEl = document.getElementById("loginAlert");
+  const successEl = document.getElementById("loginSuccessAlert");
+  if (alertEl) alertEl.style.display = "none";
+  if (successEl) successEl.style.display = "none";
+
+  const payload = {
+    name: document.getElementById("signupName").value,
+    email: document.getElementById("signupEmail").value,
+    password: document.getElementById("signupPassword").value,
+    department: document.getElementById("signupDept").value,
+    role: document.getElementById("signupRole").value
+  };
+
+  try {
+    const res = await ApiClient.signup(payload);
+    if (successEl) {
+      successEl.textContent = `✅ ${res.message}`;
+      successEl.style.display = "block";
+    }
+    // Switch to Sign In tab with pre-filled credentials
+    toggleAuthTab('signin');
+    document.getElementById("loginEmail").value = payload.email;
+    document.getElementById("loginPassword").value = payload.password;
+  } catch (err) {
+    if (alertEl) {
+      alertEl.textContent = err.message || "Sign up failed.";
+      alertEl.style.display = "block";
+    }
   }
 }
 

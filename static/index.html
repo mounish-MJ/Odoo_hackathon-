@@ -11,16 +11,28 @@
 
   <!-- LOGIN VIEW -->
   <div id="loginView" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem;">
-    <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 2.5rem;">
-      <div style="text-align: center; margin-bottom: 2rem;">
+    <div class="glass-panel" style="width: 100%; max-width: 460px; padding: 2.5rem;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
         <h1 class="brand-logo" style="justify-content: center; font-size: 2rem; margin-bottom: 0.5rem;">
           ⚡ <span>DAYFLOW</span>
         </h1>
-        <p style="color: var(--text-muted); font-size: 0.92rem;">Sign in to your HR Operating System</p>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">Intelligent HR Operating System</p>
+      </div>
+
+      <!-- Auth Toggle Tabs -->
+      <div style="display: flex; border-bottom: 1px solid var(--panel-border); margin-bottom: 1.5rem;">
+        <button id="tabBtnSignIn" onclick="toggleAuthTab('signin')" class="btn" style="flex: 1; border-radius: 0; background: none; border-bottom: 2px solid var(--primary-accent); color: var(--text-main); font-weight: 600; padding: 0.6rem;">
+          Sign In
+        </button>
+        <button id="tabBtnSignUp" onclick="toggleAuthTab('signup')" class="btn" style="flex: 1; border-radius: 0; background: none; border-bottom: 2px solid transparent; color: var(--text-muted); padding: 0.6rem;">
+          Sign Up
+        </button>
       </div>
 
       <div id="loginAlert" class="alert alert-danger" style="display: none;"></div>
+      <div id="loginSuccessAlert" class="alert alert-success" style="display: none;"></div>
 
+      <!-- SIGN IN FORM -->
       <form id="loginForm">
         <div class="form-group">
           <label for="loginEmail">Email Address</label>
@@ -30,13 +42,61 @@
           <label for="loginPassword">Password</label>
           <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required value="TestPassword123!">
         </div>
-        <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.85rem;">
+
+        <!-- Quick Demo Credentials Selector -->
+        <div style="margin-top: 1rem; margin-bottom: 1rem;">
+          <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Or select demo user account:</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
+            <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.5rem;" onclick="fillDemoAccount('employee')">👤 Employee</button>
+            <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.5rem;" onclick="fillDemoAccount('dev')">💻 Developer</button>
+            <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.5rem;" onclick="fillDemoAccount('hr')">🏢 HR Manager</button>
+            <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.5rem;" onclick="fillDemoAccount('admin')">👑 Admin</button>
+          </div>
+        </div>
+
+        <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 0.85rem;">
           Sign In
         </button>
       </form>
-      <div style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">
-        Don't have an account? <a href="#" style="color: var(--primary-accent); text-decoration: none; font-weight: 600;">Sign Up</a>
-      </div>
+
+      <!-- SIGN UP FORM -->
+      <form id="signupForm" style="display: none;">
+        <div class="form-group">
+          <label for="signupName">Full Name</label>
+          <input type="text" id="signupName" class="form-control" placeholder="John Doe" required>
+        </div>
+        <div class="form-group">
+          <label for="signupEmail">Email Address</label>
+          <input type="email" id="signupEmail" class="form-control" placeholder="john.doe@company.com" required>
+        </div>
+        <div class="form-group">
+          <label for="signupPassword">Password</label>
+          <input type="password" id="signupPassword" class="form-control" placeholder="••••••••" required>
+        </div>
+        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+          <div>
+            <label for="signupDept">Department</label>
+            <select id="signupDept" class="form-control">
+              <option value="Engineering">Engineering</option>
+              <option value="Human Resources">Human Resources</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Sales">Sales</option>
+              <option value="Finance">Finance</option>
+            </select>
+          </div>
+          <div>
+            <label for="signupRole">Role</label>
+            <select id="signupRole" class="form-control">
+              <option value="EMPLOYEE">Employee</option>
+              <option value="HR">HR Manager</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" id="btnSignup" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.85rem;">
+          Create Account
+        </button>
+      </form>
     </div>
   </div>
 

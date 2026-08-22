@@ -106,6 +106,17 @@ class Member1APIAdapter:
             except Exception as e:
                 return {"status": "ERROR", "error_code": "NETWORK_ERROR", "message": str(e)}
 
+        if auth_token and auth_token.startswith("mock_jwt_"):
+            parts = auth_token.split("_")
+            if len(parts) >= 4:
+                uid = parts[2]
+                if "admin" in uid:
+                    return {"id": "usr_admin", "user_id": "usr_admin", "name": "Alice Admin", "role": "ADMIN", "department": "Executive", "email": "admin@company.com"}
+                elif "hr" in uid or "bob" in uid:
+                    return {"id": "usr_hr_bob", "user_id": "usr_hr_bob", "name": "Bob Manager", "role": "HR", "department": "Human Resources", "email": "hr.bob@company.com"}
+                elif "charlie" in uid:
+                    return {"id": "usr_charlie", "user_id": "usr_charlie", "name": "Charlie Dev", "role": "EMPLOYEE", "department": "Engineering", "email": "charlie.dev@company.com"}
+
         return {
             "id": "usr_88392",
             "user_id": "usr_88392",
