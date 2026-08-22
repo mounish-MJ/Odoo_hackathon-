@@ -10,13 +10,18 @@ jobs:
   test-and-verify:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: "sqlite:///./hr_core_ci.db"
+      JWT_SECRET_KEY: "ci_testing_jwt_secret_key_32bytes_min_length"
+      ENVIRONMENT: "development"
+
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.12
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Install Dependencies
         run: |
@@ -27,8 +32,12 @@ jobs:
         run: |
           pytest -v
 
+      - name: Seed Database & Start HR Core Server
+        run: |
+          python scripts/seed_db.py
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          sleep 4
+
       - name: Run Member 2 Pure HTTP Client Simulation
         run: |
-          python scripts/simulate_member2_client.py &
-          sleep 3
           python scripts/simulate_member2_client.py
