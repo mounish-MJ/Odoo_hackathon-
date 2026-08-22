@@ -104,6 +104,9 @@
 ### Next Task
 - Part 6 — Wiring specific Leave Request workflow.
 
+### Commit
+`e07e3bf` — `feat(member4): implement core workflow engine with state machine validation, idempotency, and failure handling`
+
 
 
 ---
