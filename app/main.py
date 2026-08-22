@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from app.core.config import settings
 from app.core.logging import setup_logging, logger
+from app.core.request_tracing import RequestTracingMiddleware
+from app.core.rate_limit import RateLimitMiddleware
 from app.core.exceptions import (
     HRCoreException,
     hr_core_exception_handler,
@@ -32,6 +34,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Custom Middlewares
+app.add_middleware(RequestTracingMiddleware)
+app.add_middleware(RateLimitMiddleware)
+
 # CORS Configuration
 if settings.CORS_ORIGINS:
     origins = [str(origin) for origin in settings.CORS_ORIGINS]
@@ -51,4 +57,4 @@ app.add_exception_handler(Exception, generic_exception_handler)
 
 # API Routers
 app.include_router(api_router, prefix=settings.API_V1_STR)
-app.include_router(api_router)  # root endpoints alias
+app.include_router(api_router)  # Root alias routes (e.g. /health)
