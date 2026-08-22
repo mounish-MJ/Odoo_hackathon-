@@ -36,10 +36,23 @@ describe('Member 4 Integration API Endpoints Tests', () => {
     });
   });
 
-  test('1. GET /health returns HEALTHY status', async () => {
+  test('1. GET /health returns HEALTHY status with X-Request-Id header', async () => {
     const res = await request(app).get('/health');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('HEALTHY');
+    expect(res.headers['x-request-id']).toBeDefined();
+    expect(res.headers['x-correlation-id']).toBeDefined();
+  });
+
+  test('1b. Preserves incoming X-Request-Id across lifecycle', async () => {
+    const customReqId = 'custom-trace-uuid-999';
+    const res = await request(app)
+      .get('/health')
+      .set('X-Request-Id', customReqId);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['x-request-id']).toBe(customReqId);
+    expect(res.headers['x-correlation-id']).toBe(customReqId);
   });
 
   test('2. POST /api/v1/leaves/apply triggers orchestration and auto-approves 2-day leave', async () => {

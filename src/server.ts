@@ -11,6 +11,7 @@ import { SSEManager } from './notifications/sse.manager';
 import { AuditService } from './audit/audit.service';
 import { WebhookDispatcher } from './notifications/webhook.dispatcher';
 import { RateLimiter } from './security/rate-limiter';
+import { requestIdMiddleware } from './security/request-id.middleware';
 import { createPlatformRouter } from './integration/member3-api-routes';
 
 // Mocks for Member 1 and Member 2
@@ -28,8 +29,9 @@ export function createApp(): Express {
   const app = express();
 
   // -------------------------------------------------------------
-  // Security & Utility Middleware
+  // Security & Tracing Middleware
   // -------------------------------------------------------------
+  app.use(requestIdMiddleware);
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
   app.use(express.json({ limit: '10mb' }));

@@ -12,8 +12,13 @@ export * from './contracts/ai-engine.contract';
 export * from './security/auth.middleware';
 export * from './security/rbac.guard';
 export * from './security/pii.sanitizer';
+export * from './security/pii.logger';
 export * from './security/idempotency.guard';
 export * from './security/rate-limiter';
+export * from './security/request-id.middleware';
+export * from './security/error-handler';
+export * from './security/secrets';
+export * from './security/input-validator';
 
 // Orchestration
 export * from './orchestration/event-bus';
