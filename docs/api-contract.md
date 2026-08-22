@@ -1,4 +1,4 @@
-# HR Core API Contract Specification
+# HR Core API Contract Specification (Phase 1, 2 & 3)
 
 All endpoints return structured JSON responses.
 
@@ -7,176 +7,103 @@ All endpoints return structured JSON responses.
 ## 1. Application & Database Health
 
 ### `GET /api/v1/health`
-- **Authentication**: None required
+- **Authentication**: None
 - **Description**: Returns overall application health.
-- **Response (200 OK)**:
-  ```json
-  {
-    "status": "ok",
-    "app": "HR Core Platform",
-    "environment": "development"
-  }
-  ```
 
 ### `GET /api/v1/health/db`
-- **Authentication**: None required
-- **Description**: Checks database connection.
-- **Success Response (200 OK)**:
-  ```json
-  {
-    "status": "ok",
-    "database": "connected"
-  }
-  ```
-- **Failure Response (503 Service Unavailable)**:
-  ```json
-  {
-    "error": {
-      "code": "DATABASE_UNAVAILABLE",
-      "message": "Database connection failed or unavailable."
-    }
-  }
-  ```
+- **Authentication**: None
+- **Description**: Checks database connection health.
 
 ---
 
-## 2. Authentication Endpoints
+## 2. Authentication & Authorization APIs
 
 ### `POST /api/v1/auth/signup`
-- **Authentication**: None required
-- **Description**: Registers a new user account and generates a development email verification token stub.
-- **Request Body**:
-  ```json
-  {
-    "employee_code": "EMP005",
-    "email": "new.employee@company.com",
-    "password": "SecurePassword123!",
-    "role": "EMPLOYEE"
-  }
-  ```
-- **Response (201 Created)**:
-  ```json
-  {
-    "user": {
-      "id": "uuid-v4-user-id",
-      "employee_id": "uuid-v4-employee-id",
-      "email": "new.employee@company.com",
-      "role": "EMPLOYEE",
-      "is_active": true,
-      "is_verified": false,
-      "created_at": "2026-08-22T11:20:00Z",
-      "updated_at": "2026-08-22T11:20:00Z",
-      "last_login_at": null
-    },
-    "message": "Registration successful. Please verify your email using the provided verification token.",
-    "verification_token_stub": "64_char_hex_verification_token"
-  }
-  ```
-- **Error Responses**:
-  - `409 Conflict`: Email or Employee code already registered (`{"error": {"code": "CONFLICT", "message": "..."}}`)
-  - `404 Not Found`: Employee code not found in HR system (`{"error": {"code": "NOT_FOUND", "message": "..."}}`)
-
----
+- **Authentication**: None
+- **Description**: Registers a new user account, hashes password using Bcrypt, and returns a development verification token stub.
 
 ### `POST /api/v1/auth/verify-email`
-- **Authentication**: None required
-- **Description**: Verifies a user account using an email verification token stub.
-- **Request Body**:
-  ```json
-  {
-    "token": "64_char_hex_verification_token"
-  }
-  ```
-- **Response (200 OK)**:
-  ```json
-  {
-    "message": "Email address successfully verified.",
-    "is_verified": true
-  }
-  ```
-- **Error Responses**:
-  - `400 Bad Request`: Token invalid, expired, or previously used (`{"error": {"code": "INVALID_VERIFICATION_TOKEN", "message": "..."}}`)
-
----
+- **Authentication**: None
+- **Description**: Verifies email address using token.
 
 ### `POST /api/v1/auth/login`
-- **Authentication**: None required
-- **Description**: Authenticates user credentials and issues a signed JWT access token. Accepts JSON payload or form data.
-- **Request Body**:
-  ```json
-  {
-    "email": "charlie.dev@company.com",
-    "password": "DevPassword123!"
-  }
-  ```
-- **Response (200 OK)**:
-  ```json
-  {
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "token_type": "bearer",
-    "user": {
-      "id": "uuid-v4-user-id",
-      "employee_id": "uuid-v4-employee-id",
-      "email": "charlie.dev@company.com",
-      "role": "EMPLOYEE",
-      "is_active": true,
-      "is_verified": true,
-      "created_at": "2026-08-22T11:20:00Z",
-      "updated_at": "2026-08-22T11:20:00Z",
-      "last_login_at": "2026-08-22T11:20:05Z"
-    }
-  }
-  ```
-- **Error Responses**:
-  - `401 Unauthorized`: Invalid credentials or unverified account (`{"error": {"code": "INVALID_CREDENTIALS", "message": "..."}}` or `{"error": {"code": "UNVERIFIED_ACCOUNT", "message": "..."}}`)
-
----
+- **Authentication**: None
+- **Description**: Validates credentials and returns JWT Bearer access token.
 
 ### `GET /api/v1/auth/me`
-- **Authentication**: Required (`Authorization: Bearer <token>`)
-- **Role Required**: Any verified role (`EMPLOYEE`, `HR`, `ADMIN`)
-- **Description**: Returns profile information for the authenticated user.
-- **Response (200 OK)**: `UserRead` model.
-- **Error Responses**: `401 Unauthorized` if token missing, invalid, or expired.
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Description**: Returns current authenticated user details.
 
 ---
 
-## 3. RBAC Protected Test Routes
+## 3. Employee Profile APIs
 
-| Method | Path | Allowed Roles | Description |
-|---|---|---|---|
-| `GET` | `/api/v1/auth/employee-only` | `EMPLOYEE`, `HR`, `ADMIN` | Accessible by all verified employee roles |
-| `GET` | `/api/v1/auth/hr-only` | `HR`, `ADMIN` | Restricted to HR and Admin roles |
-| `GET` | `/api/v1/auth/admin-only` | `ADMIN` | Restricted exclusively to System Administrators |
+### `GET /api/v1/employees/me`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Role**: All verified roles
+- **Description**: Returns the authenticated user's own employee profile details.
 
-- **Response (200 OK)**:
-  ```json
-  {
-    "message": "Access granted to route",
-    "user_id": "uuid-v4-user-id",
-    "role": "HR"
-  }
-  ```
-- **Error Response (403 Forbidden)**:
-  ```json
-  {
-    "error": {
-      "code": "FORBIDDEN",
-      "message": "Insufficient permissions to access this HR resource."
-    }
-  }
-  ```
+### `PATCH /api/v1/employees/me`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Role**: All verified roles
+- **Description**: Self-service profile update. Allows updating `phone`. Rejects attempts to edit restricted fields (`salary`, `role`, `department`, `designation`, `employment_status`) with HTTP 422.
+
+### `GET /api/v1/employees/{employee_id}`
+- **Authentication**: Bearer JWT
+- **Role**: Self or `HR`/`ADMIN`
+- **Description**: Retrieves an employee profile by ID. Enforces server-side authorization (`enforce_self_or_admin`). Returns HTTP 403 if an employee attempts to view another employee's profile.
+
+### `PATCH /api/v1/employees/{employee_id}`
+- **Authentication**: Bearer JWT
+- **Role**: `HR`, `ADMIN`
+- **Description**: Updates administrative employee profile fields (`first_name`, `last_name`, `phone`, `department`, `designation`, `employment_status`, `manager_id`).
 
 ---
 
-## Standard Error Response Format
+## 4. Attendance Tracking APIs
 
-```json
-{
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Explanation of error",
-    "details": null
-  }
-}
-```
+### `POST /api/v1/attendance/check-in`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Description**: Records check-in timestamp using authoritative server time (UTC). Returns HTTP 409 Conflict if employee has already checked in today.
+
+### `POST /api/v1/attendance/check-out`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Description**: Records check-out timestamp. Returns HTTP 400 if no active check-in exists for today, or HTTP 409 if check-out is already recorded.
+
+### `GET /api/v1/attendance/daily`
+- **Authentication**: Bearer JWT
+- **Role**: Self or `HR`/`ADMIN`
+- **Query Parameters**: `date` (YYYY-MM-DD, default today), `employee_id` (default self).
+- **Description**: Retrieves daily attendance record for specified date and employee.
+
+### `GET /api/v1/attendance/weekly`
+- **Authentication**: Bearer JWT
+- **Role**: Self or `HR`/`ADMIN`
+- **Query Parameters**: `ref_date` (YYYY-MM-DD), `employee_id` (default self).
+- **Description**: Calculates Monday-to-Sunday weekly attendance summary and present day count.
+
+---
+
+## 5. Leave Management APIs
+
+### `POST /api/v1/leaves`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Description**: Submits a leave request (`leave_type`, `start_date`, `end_date`, `reason`). Client identity strictly comes from JWT. Enforces `start_date <= end_date` validation. Initial status is strictly `PENDING`.
+
+### `GET /api/v1/leaves`
+- **Authentication**: Bearer JWT
+- **Role**: Self or `HR`/`ADMIN`
+- **Query Parameters**: `status` (`PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`), `employee_id`.
+- **Description**: Lists leave requests. Employees can only list their own requests. HR/Admin can list all or filter by employee/status.
+
+### `PATCH /api/v1/leaves/{leave_id}/approve`
+- **Authentication**: Bearer JWT
+- **Role**: `HR`, `ADMIN`
+- **Request Body**: `{"review_comment": "Approved by HR"}`
+- **Description**: Approves a `PENDING` leave request. Records reviewer ID, review timestamp, and comments. Returns HTTP 409 if request is not in `PENDING` state.
+
+### `PATCH /api/v1/leaves/{leave_id}/reject`
+- **Authentication**: Bearer JWT
+- **Role**: `HR`, `ADMIN`
+- **Request Body**: `{"review_comment": "Rejected due to overlap"}`
+- **Description**: Rejects a `PENDING` leave request. Records reviewer ID, review timestamp, and comments. Returns HTTP 409 if request is not in `PENDING` state.
