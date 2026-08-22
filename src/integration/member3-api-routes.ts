@@ -20,6 +20,7 @@ import { SSEManager } from '../notifications/sse.manager';
 import { AuditService } from '../audit/audit.service';
 import { WebhookDispatcher } from '../notifications/webhook.dispatcher';
 import { SecurityErrorHandler } from '../security/error-handler';
+import { AIOrchestratorService } from '../ai/ai-orchestrator.service';
 
 export function createPlatformRouter(
   workflowEngine: WorkflowEngine,
@@ -468,6 +469,141 @@ export function createPlatformRouter(
           events: webhook.events,
           signature_key: webhook.signatureSecret,
         },
+      });
+    }
+  );
+
+  // -------------------------------------------------------------
+  // AI & Intelligence Capabilities (Member 4 -> Frontend Integration)
+  // -------------------------------------------------------------
+  const aiService = AIOrchestratorService.getInstance();
+
+  /**
+   * 1. Attendance Anomaly Detection
+   */
+  router.post(
+    '/ai/attendance/analyze',
+    AuthSecurityService.authenticate,
+    (req: AuthenticatedRequest, res: Response) => {
+      const { employeeId, records } = req.body;
+      const caller = req.user!;
+
+      // Enforce resource isolation: employee can only analyze self unless HR/Manager/Admin
+      if (caller.role === Role.EMPLOYEE && employeeId && caller.userId !== employeeId) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Employees cannot inspect attendance anomaly telemetry for other employees.',
+          },
+        });
+        return;
+      }
+
+      const targetEmp = employeeId || caller.userId;
+      const result = aiService.analyzeAttendance(targetEmp, records);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    }
+  );
+
+  /**
+   * 2. Leave Intelligence & Concurrency Analysis
+   */
+  router.post(
+    '/ai/leaves/analyze',
+    AuthSecurityService.authenticate,
+    (req: AuthenticatedRequest, res: Response) => {
+      const input = req.body;
+      const caller = req.user!;
+
+      if (caller.role === Role.EMPLOYEE && input?.employeeId && caller.userId !== input.employeeId) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Employees cannot inspect leave intelligence telemetry for other employees.',
+          },
+        });
+        return;
+      }
+
+      const result = aiService.analyzeLeaves({
+        ...input,
+        employeeId: input?.employeeId || caller.userId,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    }
+  );
+
+  /**
+   * 3. Payroll Anomaly Detection (HR / Admin only)
+   */
+  router.post(
+    '/ai/payroll/analyze',
+    AuthSecurityService.authenticate,
+    RbacSecurityGuard.requireRoles(Role.HR, Role.ADMIN),
+    (req: AuthenticatedRequest, res: Response) => {
+      const { employeeId, currentPayroll, historicalPayrolls } = req.body;
+
+      if (!employeeId || !currentPayroll) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Missing required parameters: employeeId and currentPayroll are required.',
+          },
+        });
+        return;
+      }
+
+      const result = aiService.analyzePayroll(employeeId, currentPayroll, historicalPayrolls || []);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    }
+  );
+
+  /**
+   * 4. Employee Holistic Insights Synthesis
+   */
+  router.post(
+    '/ai/employee-insights',
+    AuthSecurityService.authenticate,
+    (req: AuthenticatedRequest, res: Response) => {
+      const profile = req.body;
+      const caller = req.user!;
+
+      if (caller.role === Role.EMPLOYEE && profile?.employeeId && caller.userId !== profile.employeeId) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Employees cannot inspect holistic insights for other employees.',
+          },
+        });
+        return;
+      }
+
+      const result = aiService.generateEmployeeInsights({
+        ...profile,
+        employeeId: profile?.employeeId || caller.userId,
+        name: profile?.name || caller.name,
+        departmentId: profile?.departmentId || caller.departmentId || 'general',
+      });
+
+      res.json({
+        success: true,
+        data: result,
       });
     }
   );

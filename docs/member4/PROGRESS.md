@@ -456,6 +456,43 @@
 ### Commit
 `4021505` — `feat(member4): complete final engineering review with correlationId tracing and live end-to-end simulation script`
 
+---
+
+## Checkpoint 13 (AI & Intelligence Capabilities Layer)
+**Date**: 2026-08-22  
+**Time**: 14:42 IST  
+
+### Completed
+- Implemented robust, explainable, and production-ready AI & Intelligence capabilities without breaking Member 1 HR Core or bypassing Member 2 integration:
+  - **Attendance Anomaly Engine** ([`src/ai/attendance-anomaly.engine.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/ai/attendance-anomaly.engine.ts)): Detects unusual working shift lengths (> 14h), repeated consecutive absences (>= 3 days), Monday/Friday clustering patterns, and repeated lateness.
+  - **Leave Intelligence Engine** ([`src/ai/leave-intelligence.engine.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/ai/leave-intelligence.engine.ts)): Evaluates department concurrency conflicts (> 40% team absent), balance exhaustion risks, and burnout indicators (0 leaves in cycle).
+  - **Payroll Anomaly Engine** ([`src/ai/payroll-anomaly.engine.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/ai/payroll-anomaly.engine.ts)): Flags critical negative net salary, excessive deduction ratios (> 45%), and historical salary deviations (> 30%).
+  - **Employee Insights Engine** ([`src/ai/employee-insights.engine.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/ai/employee-insights.engine.ts)): Synthesizes holistic engagement scores (0-100), retention risk levels (`LOW`, `MEDIUM`, `HIGH`), and explainable HR recommendations.
+  - **Master AI Orchestrator Service** ([`src/ai/ai-orchestrator.service.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/ai/ai-orchestrator.service.ts)): Unified facade with deterministic safety fallback guards and data sufficiency validators.
+  - **Backend-Mediated REST APIs** ([`src/integration/member3-api-routes.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/integration/member3-api-routes.ts)): Exposes `/api/v1/ai/attendance/analyze`, `/api/v1/ai/leaves/analyze`, `/api/v1/ai/payroll/analyze`, and `/api/v1/ai/employee-insights` with RBAC and resource ownership isolation.
+- Verification: 15 test suites, **111 passed tests (100% pass rate)**, 10/10 automated smoke tests, live simulation verified.
+
+### Status
+- **100% Complete & Production-Ready**.
+
+### Tests
+- `tests/ai-intelligence.test.ts` — PASS (19 tests)
+- `npm run demo:simulate` — PASS (Live 8-step simulation verified)
+- `npm run test:smoke` — PASS (10/10 criteria verified)
+- `npm test` — PASS (15 suites, 111 tests passing)
+
+### Files Changed
+- `src/contracts/ai-intelligence.contract.ts` [NEW]
+- `src/ai/attendance-anomaly.engine.ts` [NEW]
+- `src/ai/leave-intelligence.engine.ts` [NEW]
+- `src/ai/payroll-anomaly.engine.ts` [NEW]
+- `src/ai/employee-insights.engine.ts` [NEW]
+- `src/ai/ai-orchestrator.service.ts` [NEW]
+- `src/integration/member3-api-routes.ts` [MODIFIED]
+- `tests/ai-intelligence.test.ts` [NEW]
+- `docs/member4/PROGRESS.md` [MODIFIED]
+
+
 
 
 
