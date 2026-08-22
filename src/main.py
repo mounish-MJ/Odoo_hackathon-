@@ -3,12 +3,15 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.config import settings
 from src.api.router_copilot import router as copilot_router
 from src.api.router_policy import router as policy_router
 from src.api.router_decision import router as decision_router
 from src.api.router_anomaly import router as anomaly_router
+from src.api.router_auth import router as auth_router
+from src.api.router_hr import router as hr_router
 from src.services.policy_rag import policy_rag_service
 from src.schemas.rag import PolicyIngestRequest
 
@@ -20,7 +23,7 @@ logger = logging.getLogger("dayflow.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup seed policy ingestion."""
-    logger.info("Initializing DAYFLOW Member 2 AI Service...")
+    logger.info("Initializing DAYFLOW Member 2 AI Service & Member 3 Frontend...")
     
     # Ingest Seed Policies if present
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,8 +54,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="DAYFLOW — AI Intelligence & Decision Engine",
-    description="Member 2 Microservice delivering Policy RAG, Employee Context Engine, Leave Decision Support, and Anomaly Intelligence.",
+    title="DAYFLOW — Intelligent HR Operating System",
+    description="Member 2 Microservice & Member 3 Web Frontend UI delivering Policy RAG, HR Copilot, Decision Engine, and HRMS Management.",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -67,6 +70,8 @@ app.add_middleware(
 )
 
 # Register API Routers
+app.include_router(auth_router)
+app.include_router(hr_router)
 app.include_router(copilot_router)
 app.include_router(policy_router)
 app.include_router(decision_router)
@@ -84,3 +89,10 @@ def health_check():
         "llm_model": settings.LLM_MODEL,
         "embedding_model": settings.EMBEDDING_MODEL
     }
+
+
+# Mount Member 3 Web Frontend static assets and SPA root AFTER API routes
+static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")

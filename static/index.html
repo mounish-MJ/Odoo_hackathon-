@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DAYFLOW — Intelligent HR Operating System</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- LOGIN VIEW -->
+  <div id="loginView" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem;">
+    <div class="glass-panel" style="width: 100%; max-width: 420px; padding: 2.5rem;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <h1 class="brand-logo" style="justify-content: center; font-size: 1.8rem; margin-bottom: 0.5rem;">
+          ⚡ <span>DAYFLOW</span>
+        </h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Sign in to your HR Operating System</p>
+      </div>
+
+      <div id="loginAlert" class="alert alert-danger" style="display: none;"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginEmail">Email Address</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="test.employee@dayflow.com" required value="test.employee@dayflow.com">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required value="TestPassword123!">
+        </div>
+        <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.8rem;">
+          Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN APP VIEW -->
+  <div id="appView" style="display: none; flex-direction: column; min-height: 100vh;">
+    <!-- Navbar -->
+    <header class="navbar">
+      <div class="brand-logo">
+        ⚡ <span>DAYFLOW</span>
+      </div>
+      <div class="nav-user">
+        <div class="user-badge">
+          <div class="user-avatar" id="userAvatar">S</div>
+          <span id="userNameDisplay">Sarah Jenkins</span>
+        </div>
+        <button id="btnLogout" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Logout</button>
+      </div>
+    </header>
+
+    <div class="app-container">
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="nav-link active" onclick="switchTab('dashboard')">📊 Dashboard</div>
+        <div class="nav-link" onclick="switchTab('leaves')">📅 Leave Requests</div>
+        <div class="nav-link" onclick="switchTab('attendance')">⏱️ Attendance</div>
+        <div class="nav-link" onclick="switchTab('payroll')">💳 Payroll</div>
+      </nav>
+
+      <!-- Main Workspace -->
+      <main class="main-content">
+        <!-- Status Alert Banner -->
+        <div id="globalAlert" class="alert" style="display: none;"></div>
+
+        <!-- TAB: DASHBOARD -->
+        <section id="tabDashboard">
+          <h2 style="margin-bottom: 1.5rem;">Employee Dashboard</h2>
+          <div class="grid-stats">
+            <div class="glass-panel stat-card">
+              <span class="stat-label">Available Leave</span>
+              <span class="stat-value" id="statLeaveBalance" style="color: var(--secondary-accent);">12 Days</span>
+            </div>
+            <div class="glass-panel stat-card">
+              <span class="stat-label">30-Day Attendance</span>
+              <span class="stat-value" id="statAttendance">20 Days</span>
+            </div>
+            <div class="glass-panel stat-card">
+              <span class="stat-label">Current Gross Pay</span>
+              <span class="stat-value" id="statGrossPay">$7,500.00</span>
+            </div>
+          </div>
+
+          <div class="glass-panel" style="padding: 1.5rem;">
+            <h3 style="margin-bottom: 1rem;">Profile Context</h3>
+            <div id="profileDetails" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <div><strong>Department:</strong> <span id="profDept">Engineering</span></div>
+              <div><strong>Role:</strong> <span id="profRole">EMPLOYEE</span></div>
+              <div><strong>Status:</strong> <span class="badge badge-success">ACTIVE</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: LEAVES -->
+        <section id="tabLeaves" style="display: none;">
+          <h2 style="margin-bottom: 1.5rem;">Leave Management</h2>
+
+          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+            <!-- Leave Application Form -->
+            <div class="glass-panel" style="padding: 1.5rem;">
+              <h3 style="margin-bottom: 1rem;">Apply for Leave</h3>
+              <form id="leaveForm">
+                <div class="form-group">
+                  <label for="leaveType">Leave Type</label>
+                  <select id="leaveType" class="form-control" required>
+                    <option value="ANNUAL">Annual Leave</option>
+                    <option value="CASUAL" selected>Casual Leave</option>
+                    <option value="SICK">Sick Leave</option>
+                    <option value="MATERNITY">Maternity Leave</option>
+                    <option value="PATERNITY">Paternity Leave</option>
+                    <option value="UNPAID">Unpaid Leave</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="startDate">Start Date</label>
+                  <input type="date" id="startDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="endDate">End Date</label>
+                  <input type="date" id="endDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="leaveReason">Reason</label>
+                  <textarea id="leaveReason" class="form-control" rows="3" placeholder="Family function / medical..." required></textarea>
+                </div>
+                <button type="submit" id="btnSubmitLeave" class="btn btn-primary" style="width: 100%;">
+                  Submit Application
+                </button>
+              </form>
+            </div>
+
+            <!-- Leave History Table -->
+            <div class="glass-panel" style="padding: 1.5rem;">
+              <h3 style="margin-bottom: 1rem;">Leave Balances & History</h3>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Leave Type</th>
+                      <th>Total</th>
+                      <th>Used</th>
+                      <th>Pending</th>
+                      <th>Available</th>
+                    </tr>
+                  </thead>
+                  <tbody id="leaveBalanceTable">
+                    <tr><td colspan="5">Loading...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: ATTENDANCE -->
+        <section id="tabAttendance" style="display: none;">
+          <h2 style="margin-bottom: 1.5rem;">Attendance Records</h2>
+          <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+            <h3>Weekly Attendance Summary</h3>
+            <p style="color: var(--text-muted); margin-top: 0.5rem;">Total Days Present: <strong id="weeklyPresent" style="color: var(--secondary-accent);">5 Days</strong></p>
+          </div>
+          <div class="glass-panel" style="padding: 1.5rem;">
+            <h3>Daily Check-in Logs</h3>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User ID</th>
+                    <th>Status</th>
+                    <th>Check In Time</th>
+                  </tr>
+                </thead>
+                <tbody id="attendanceTable">
+                  <tr><td colspan="3">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB: PAYROLL -->
+        <section id="tabPayroll" style="display: none;">
+          <h2 style="margin-bottom: 1.5rem;">Payroll Summary</h2>
+          <div class="glass-panel" style="padding: 1.5rem;">
+            <h3 style="margin-bottom: 1rem;">Pay Period: <span id="payrollPeriod">2026-08</span></h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
+              <div class="stat-card glass-panel">
+                <span class="stat-label">Basic Salary</span>
+                <span class="stat-value" id="payBasic">$7,000.00</span>
+              </div>
+              <div class="stat-card glass-panel">
+                <span class="stat-label">Allowances</span>
+                <span class="stat-value" id="payAllowances" style="color: var(--secondary-accent);">$1,000.00</span>
+              </div>
+              <div class="stat-card glass-panel">
+                <span class="stat-label">Deductions</span>
+                <span class="stat-value" id="payDeductions" style="color: var(--danger-accent);">$500.00</span>
+              </div>
+              <div class="stat-card glass-panel">
+                <span class="stat-label">Net Salary</span>
+                <span class="stat-value" id="payNet" style="color: #38bdf8;">$7,500.00</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- AI Copilot Chat Drawer -->
+      <aside class="chat-drawer">
+        <div class="chat-header">
+          <span>🤖 AI HR Copilot</span>
+          <span class="badge badge-success">Online</span>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="msg-bubble msg-ai">
+            Hello! I am your DAYFLOW AI HR Assistant. You can ask me policy questions, or say <em>"I need casual leave tomorrow"</em> to apply!
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" id="chatInput" class="form-control" placeholder="Ask AI HR Assistant..." style="flex: 1;">
+          <button id="btnSendChat" class="btn btn-primary">Send</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
