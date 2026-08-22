@@ -1,7 +1,8 @@
-# DAYFLOW — Member Integration Contracts Specification
+# DAYFLOW — Cross-Member Integration Contracts Specification
 
 **Author**: Member 4 — Orchestration + Security + Platform Lead  
-**Scope**: Integration specifications for Member 1 (HR Core), Member 2 (AI Engine), and Member 3 (Frontend).
+**Scope**: Integration specifications for Member 1 (HR Core), Member 2 (AI Engine), and Member 3 (Product Experience & Frontend).  
+**Repository Branch**: `Sxree__06`
 
 ---
 
@@ -10,15 +11,38 @@
 The **DAYFLOW Platform** follows strict contract-driven development. All cross-member communication occurs through typed interfaces, deterministic event envelopes, or standardized REST/SSE APIs.
 
 - **Zero Coupling**: No member directly imports another member's internal database models or private business logic.
+- **Strict Role Separation**:
+  - **Member 1** owns HR Core, Employee domain logic, Attendance, Leave balance, Payroll mutations, and Organization structure.
+  - **Member 2** owns AI models, agents, decision engines, prompts, reasoning, and risk scoring.
+  - **Member 3** owns Frontend pages, UI/UX components, dashboards, and client-side presentation.
+  - **Member 4** owns Orchestration pipeline, Security & RBAC perimeter, Event infrastructure, Notification engine, Audit trail, and Request tracing.
 - **Idempotency**: All mutating operations and event triggers accept an `idempotencyKey` / `X-Idempotency-Key` header.
-- **PII Redaction**: All payloads passing through platform loggers and audit services are automatically masked.
+- **PII & Secret Redaction**: All payloads passing through platform loggers, notifications, and audit services are automatically masked.
 - **Correlation**: Every request and event carries a `correlationId` (`X-Request-Id`).
+
+```text
+       ┌─────────────────────────────────────────────────────────────┐
+       │              MEMBER 3: FRONTEND (React / UI)                │
+       └──────────────┬───────────────────────────────▲──────────────┘
+                      │ REST API Calls                │ SSE Stream & Notifications
+                      ▼                               │
+       ┌──────────────────────────────────────────────┴──────────────┐
+       │           MEMBER 4: PLATFORM & ORCHESTRATOR                 │
+       │   (Security Perimeter, Event Bus, State Machine, Audit)     │
+       └───┬─────────────────────────────────────────────────────┬───┘
+           │ AI Risk Queries (IAIEngineService)                   │ HR Core Mutations (IHRCoreService)
+           ▼                                                     ▼
+┌───────────────────────────┐                         ┌───────────────────────────┐
+│   MEMBER 2: AI ENGINE     │                         │   MEMBER 1: HR CORE       │
+│  (Risk Scoring, Anomaly)  │                         │ (Balances, Records, DB)   │
+└───────────────────────────┘                         └───────────────────────────┘
+```
 
 ---
 
-## 2. Integration with Member 1 — HR Core
+## 2. Integration 1 — Member 1 (System Architecture & HR Core)
 
-Member 1 provides deterministic domain state mutations and reads via the `IHRCoreService` interface (`src/contracts/hr-core.contract.ts`).
+Member 4 consumes Member 1's HR Core services through typed contracts (`IHRCoreService`) and adapters without taking ownership of HR business logic or duplicating database models.
 
 ### 2.1 Interface Definition (`IHRCoreService`)
 
@@ -42,20 +66,47 @@ export interface IHRCoreService {
 }
 ```
 
-### 2.2 Event Subscriptions Emitted by Member 1
-Member 1 can publish domain events directly to the `PlatformEventBus` or via `POST /api/v1/events/publish`:
-- `leave.applied`
-- `attendance.marked`
-- `payroll.run_initiated`
-- `employee.onboarded`
+### 2.2 HTTP Adapter & Live Integration (`HttpHRCoreService`)
+- **Configured via**: `process.env.MEMBER1_HR_CORE_URL` (default: `http://localhost:8000/api/v1`)
+- **Endpoints Consumed**:
+  - `GET /leaves/balances?userId={userId}&leaveTypeId={leaveTypeId}`
+  - `POST /leaves/deduct-balance`
+  - `PUT /leaves/{leaveRequestId}/status`
+  - `POST /attendance/check-in`
+  - `POST /payroll/mutate`
+  - `GET /employees/{userId}/manager`
+- **Fallback Mechanism**: If Member 1's Python/FastAPI service is offline or undergoing migrations, `HttpHRCoreService` automatically falls back to deterministic rule ledger to prevent platform crashes.
+
+### 2.3 Member 1 Event Ingestion
+Member 1 can publish domain events directly to the platform event bus without knowing internal orchestration logic:
+```typescript
+import { EventIngestionService, StandardEventType } from 'dayflow-orchestration-platform';
+
+const ingestion = EventIngestionService.getInstance();
+await ingestion.publishDomainEvent({
+  eventType: StandardEventType.EMPLOYEE_UPDATED,
+  resourceType: 'employee',
+  resourceId: 'emp_123',
+  actor: { userId: 'hr_lead', role: 'HR' },
+  payload: { departmentId: 'engineering', designation: 'Staff Software Engineer' },
+  correlationId: 'trace_hr_01',
+});
+```
 
 ---
 
-## 3. Integration with Member 2 — AI Intelligence & Decision Engine
+## 3. Integration 2 — Member 2 (AI Intelligence & Decision Engine)
 
-Member 2 provides machine learning predictions and LLM reasoning via the `IAIEngineService` interface (`src/contracts/ai-engine.contract.ts`).
+Member 4 consumes AI evaluations and risk predictions from Member 2 through typed contracts (`IAIEngineService`).
 
-### 3.1 Interface Definition (`IAIEngineService`)
+### 3.1 Critical Security Rule for AI Integration
+> [!IMPORTANT]
+> **AI Must Never Override Security Perimeter**:
+> 1. AI output is treated strictly as an **advisory decision input** or metadata signal.
+> 2. AI recommendations **cannot bypass** authentication, RBAC authorization, manager approval gates, deterministic balance verification, or audit logging.
+> 3. Even if AI recommends `AUTO_APPROVE`, the request must still pass through valid employee credentials, non-negative balance checks, and security guards.
+
+### 3.2 Interface Definition (`IAIEngineService`)
 
 ```typescript
 export interface IAIEngineService {
@@ -63,11 +114,7 @@ export interface IAIEngineService {
   detectAttendanceAnomaly(input: AttendanceAnomalyInput): Promise<AttendanceAnomalyOutput>;
   calculateAttritionRisk(userId: string): Promise<{ riskScore: number; riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'; drivers: string[] }>;
 }
-```
 
-### 3.2 Risk Assessment Schema
-
-```typescript
 export interface LeaveRiskAssessmentInput {
   userId: string;
   leaveType: string;
@@ -80,7 +127,7 @@ export interface LeaveRiskAssessmentInput {
 }
 
 export interface LeaveRiskAssessmentOutput {
-  riskScore: number; // 0.0 (low risk) to 1.0 (high risk)
+  riskScore: number; // 0.0 (low risk) to 1.0 (critical risk)
   approvalConfidence: number; // 0.0 to 1.0
   autoApproveRecommended: boolean;
   predictedApprovalTimeHours: number;
@@ -90,21 +137,29 @@ export interface LeaveRiskAssessmentOutput {
 }
 ```
 
+### 3.3 HTTP Adapter & Live Integration (`HttpAIEngineService`)
+- **Configured via**: `process.env.MEMBER2_AI_ENGINE_URL` (default: `http://localhost:8000/api/v1/ai`)
+- **Endpoints Consumed**:
+  - `POST /evaluate-leave-risk`
+  - `POST /detect-attendance-anomaly`
+  - `POST /attrition-risk/{userId}`
+- **Fallback Mechanism**: Deterministic rule-based risk scoring (≤ 2 days: 0.15 low risk, > 2 days: 0.45 moderate risk) if Member 2's FastAPI service is offline.
+
 ---
 
-## 4. Integration with Member 3 — Product Experience & Frontend
+## 4. Integration 3 — Member 3 (Product Experience & Frontend)
 
-Member 3 consumes Member 4's platform services via REST APIs and real-time Server-Sent Events (SSE).
+Member 4 provides clean REST APIs and real-time Server-Sent Events (SSE) for Member 3 to consume.
 
 ### 4.1 Base URL & Security Headers
 - **Base URL**: `http://localhost:4000/api/v1`
 - **Auth Header**: `Authorization: Bearer <JWT_TOKEN>`
-- **Request ID Header**: `X-Request-Id: <UUID>` (Optional; generated if omitted)
-- **Idempotency Header**: `X-Idempotency-Key: <UUID>` (Optional for replay protection)
+- **Request ID Header**: `X-Request-Id: <UUID>` (Preserved throughout execution)
+- **Idempotency Header**: `X-Idempotency-Key: <UUID>` (For duplicate replay protection)
 
-### 4.2 Standard API Response Envelope
+### 4.2 Standard API Response Envelopes
 
-#### Success Response:
+#### Success Envelope:
 ```json
 {
   "success": true,
@@ -116,13 +171,13 @@ Member 3 consumes Member 4's platform services via REST APIs and real-time Serve
 }
 ```
 
-#### Error Response:
+#### Error Envelope:
 ```json
 {
   "success": false,
   "error": {
     "code": "VALIDATION_ERROR | UNAUTHORIZED | FORBIDDEN | NOT_FOUND | INTERNAL_ERROR",
-    "message": "User-friendly safe error message",
+    "message": "Human-readable description without stack traces",
     "details": [
       { "field": "startDate", "issue": "startDate must be in YYYY-MM-DD format" }
     ]
@@ -133,241 +188,83 @@ Member 3 consumes Member 4's platform services via REST APIs and real-time Serve
 ### 4.3 Real-Time SSE Stream Endpoint
 - **URL**: `GET /api/v1/notifications/stream?token=<JWT_TOKEN>`
 - **Event Types Emitted**:
-  - `event: connected` — Initial handshake.
-  - `event: notification` — Direct user notification (e.g. leave approval, manager alert).
-  - `event: broadcast_alert` — Role-based broadcast (e.g. all HR users).
-  - `: ping` — 25-second heartbeat keepalive.
+  - `event: connected` — Initial connection handshake with clientId.
+  - `event: notification` — Direct user notification (e.g. leave status update, manager approval alert).
+  - `event: broadcast_alert` — Role-based broadcast alerts (e.g. all HR users).
+  - `: ping` — 25-second heartbeat keepalive to prevent browser timeout.
 
-### 4.4 Endpoints Reference for Member 3
+### 4.4 Complete REST API Surface for Member 3
 
-| Endpoint | Method | Role Allowed | Description |
+| Method | Endpoint | Allowed Roles | Description |
 | :--- | :--- | :--- | :--- |
-| `/leaves/apply` | `POST` | `EMPLOYEE`, `MANAGER`, `HR`, `ADMIN` | Trigger 8-step leave workflow. |
-| `/workflows/:workflowId` | `GET` | Resource Owner or `ADMIN`, `HR`, `MANAGER` | Track live workflow step results. |
-| `/approvals/pending` | `GET` | `MANAGER`, `HR`, `ADMIN` | View manager approval queue. |
-| `/approvals/:id/decide` | `POST` | `MANAGER`, `HR`, `ADMIN` | Submit decision (`APPROVED` / `REJECTED`). |
-| `/notifications` | `GET` | All Authenticated | Get in-app notification inbox. |
-| `/notifications/:id/read` | `PUT` | Resource Owner | Mark notification as read. |
-| `/notifications/read-all` | `PUT` | Resource Owner | Mark all notifications as read. |
-| `/audit/logs` | `GET` | `HR`, `ADMIN` | Search compliance audit logs. |
-| `/webhooks/register` | `POST` | `ADMIN` | Register third-party webhook listener. |
+| `GET` | `/health` | Public | Platform health & component diagnostics. |
+| `POST` | `/leaves/apply` | `EMPLOYEE`, `MANAGER`, `HR`, `ADMIN` | Submits leave request and initiates 8-step orchestration. |
+| `GET` | `/workflows/:workflowId` | Resource Owner, `MANAGER`, `HR`, `ADMIN` | Queries live workflow execution progress and step durations. |
+| `GET` | `/approvals/pending` | `MANAGER`, `HR`, `ADMIN` | Queries the caller's queue of pending approvals. |
+| `GET` | `/approvals/:approvalId` | Requester, Approver, `HR`, `ADMIN` | Fetches full approval state and linked workflow metadata. |
+| `GET` | `/approvals/workflow/:workflowId` | Requester, Approver, `HR`, `ADMIN` | Fetches approval record linked to a specific workflow execution. |
+| `POST` | `/approvals/:approvalId/decide` | `MANAGER`, `HR`, `ADMIN` | Submits approval or rejection decision (`APPROVED` / `REJECTED`). |
+| `GET` | `/notifications` | All Authenticated | Retrieves in-app notifications (supports `unread_only=true`, `limit`). |
+| `PUT` | `/notifications/:id/read` | Resource Owner | Marks a single notification as read. |
+| `PUT` | `/notifications/read-all` | Resource Owner | Marks all user notifications as read. |
+| `GET` | `/audit/logs` | `HR`, `ADMIN` | Queries immutable compliance audit logs with rich filters. |
+| `GET` | `/audit/logs/:auditId` | `HR`, `ADMIN` | Retrieves single immutable audit record with diff. |
+| `POST` | `/webhooks/register` | `ADMIN` | Registers third-party webhook listener with HMAC secret. |
 
 ---
 
-## 5. Standardized Event Envelope & Canonical Event Schemas
+## 5. Workflow State Machine Specification
 
-All asynchronous domain events follow the single canonical `StandardEvent` contract:
+Workflows transition strictly through validated sequential states. Unsanctioned state jumps throw `IllegalStateTransitionError`:
 
-```typescript
-export interface StandardEvent<T = Record<string, unknown>> {
-  eventId: string;                  // Unique UUID v4
-  eventType: StandardEventType;     // One of the 9 canonical event types
-  timestamp: string;                // ISO-8601 UTC timestamp
-  actor: EventActor;                // { userId, role, email? }
-  source: EventSource;              // e.g. 'MEMBER_1_HR_CORE', 'MEMBER_3_FRONTEND'
-  resourceType: EventResourceType;  // 'leave' | 'attendance' | 'payroll' | 'employee' | 'approval' | 'notification' | 'workflow'
-  resourceId: string;               // ID of the target domain resource
-  correlationId: string;            // Tracing correlation ID
-  version: string;                  // Event schema version ('1.0')
-  payload: T;                       // Strongly typed domain payload
-  aiSignals?: AISignals;            // Optional AI data metadata (cannot bypass auth/approval)
-  idempotencyKey?: string;          // Optional idempotency key for deduplication
-}
+```text
+[INITIALIZED] 
+      │
+      ▼
+ [VALIDATED]
+      │
+      ▼
+[PERMISSION_CHECKED]
+      │
+      ▼
+[RISK_ASSESSED] ──(Requires Human Approval)──► [AWAITING_APPROVAL] ──► [APPROVED]
+      │                                                                      │
+(Auto-Approved)                                                              │
+      │                                                                      │
+      └───────────────────────────────┬──────────────────────────────────────┘
+                                      │
+                                      ▼
+                             [EXECUTING_ACTION]
+                                      │
+                                      ▼
+                                 [VERIFYING]
+                                      │
+                                      ▼
+                                 [NOTIFYING]
+                                      │
+                                      ▼
+                                 [AUDITING]
+                                      │
+                                      ▼
+                                [COMPLETED]
+
+* Any error at any stage safely transitions to [FAILED] with captured diagnostic error and failedStep.
 ```
 
 ---
 
-### 5.1 Canonical Event Schemas (The 9 Active System Events)
+## 6. Canonical Event Schemas (The 9 Active System Events)
 
-#### 1. `LeaveRequested`
-- **Emitted By**: Member 3 (Frontend) or Member 1 (HR Core)
-- **Resource Type**: `leave`
-- **Payload Schema**:
-  ```json
-  {
-    "userId": "emp_123",
-    "leaveTypeId": "PAID",
-    "startDate": "2026-09-01",
-    "endDate": "2026-09-03",
-    "days": 3,
-    "reason": "Family gathering"
-  }
-  ```
+All domain events strictly follow the standardized `StandardEvent` envelope:
 
-#### 2. `LeaveApproved`
-- **Emitted By**: Member 4 (Orchestrator upon Auto-Approval) or Member 3 / Member 1 (Manager/HR Approval)
-- **Resource Type**: `leave`
-- **Payload Schema**:
-  ```json
-  {
-    "leaveRequestId": "LR-101",
-    "userId": "emp_123",
-    "daysDeducted": 3,
-    "newBalance": 12,
-    "approvedBy": "mgr_456",
-    "approvalType": "MANAGER_APPROVAL"
-  }
-  ```
-
-#### 3. `LeaveRejected`
-- **Emitted By**: Member 3 / Member 1 (Manager or HR rejection)
-- **Resource Type**: `leave`
-- **Payload Schema**:
-  ```json
-  {
-    "leaveRequestId": "LR-101",
-    "userId": "emp_123",
-    "rejectedBy": "mgr_456",
-    "reason": "Critical project release milestone on requested dates"
-  }
-  ```
-
-#### 4. `ApprovalRequested`
-- **Emitted By**: Member 4 (Orchestration approval gate)
-- **Resource Type**: `approval`
-- **Payload Schema**:
-  ```json
-  {
-    "approvalId": "appr_789",
-    "workflowId": "wf_abc123",
-    "workflowType": "leave-request",
-    "requesterId": "emp_123",
-    "assignedRoleId": "MANAGER",
-    "assignedUserId": "mgr_456",
-    "aiRiskScore": 0.45,
-    "aiRationale": "Multi-day leave requested"
-  }
-  ```
-
-#### 5. `ApprovalCompleted`
-- **Emitted By**: Member 4 / Member 3 (Manager/HR decision submitted)
-- **Resource Type**: `approval`
-- **Payload Schema**:
-  ```json
-  {
-    "approvalId": "appr_789",
-    "workflowId": "wf_abc123",
-    "decision": "APPROVED",
-    "deciderId": "mgr_456",
-    "comments": "Approved with team coverage confirmed"
-  }
-  ```
-
-#### 6. `EmployeeUpdated`
-- **Emitted By**: Member 1 (HR Core)
-- **Resource Type**: `employee`
-- **Payload Schema**:
-  ```json
-  {
-    "userId": "emp_123",
-    "departmentId": "engineering",
-    "designation": "Staff Software Engineer",
-    "reportingManagerId": "mgr_999",
-    "updatedFields": ["designation", "reportingManagerId"]
-  }
-  ```
-
-#### 7. `NotificationRequested`
-- **Emitted By**: Any Member
-- **Resource Type**: `notification`
-- **Payload Schema**:
-  ```json
-  {
-    "recipientId": "emp_123",
-    "recipientRole": "EMPLOYEE",
-    "title": "Leave Approved",
-    "message": "Your leave request for 3 days has been approved.",
-    "channels": ["IN_APP", "SSE_STREAM"]
-  }
-  ```
-
-#### 8. `ActionCompleted`
-- **Emitted By**: Member 1 (HR Core) or Member 4 (Platform)
-- **Resource Type**: `workflow`
-- **Payload Schema**:
-  ```json
-  {
-    "actionName": "payroll.batch_mutation",
-    "batchId": "PAY-2026-08",
-    "processedCount": 150,
-    "status": "SUCCESS"
-  }
-  ```
-
-#### 9. `ActionFailed`
-- **Emitted By**: Member 1 or Member 4
-- **Resource Type**: `workflow`
-- **Payload Schema**:
-  ```json
-  {
-    "actionName": "leave.deduct_balance",
-    "resourceId": "LR-101",
-    "error": "Insufficient leave balance",
-    "retryCount": 2
-  }
-  ```
-
----
-
-## 6. Member Integration Interfaces
-
-### 6.1 Member 1 Publish Interface (TypeScript)
-```typescript
-import { EventIngestionService, StandardEventType } from 'dayflow-orchestration-platform';
-
-const ingestion = EventIngestionService.getInstance();
-
-// Member 1 publishes an event without needing internal orchestration knowledge:
-await ingestion.publishDomainEvent({
-  eventType: StandardEventType.EMPLOYEE_UPDATED,
-  resourceType: 'employee',
-  resourceId: 'emp_123',
-  actor: { userId: 'hr_lead', role: 'HR' },
-  payload: { departmentId: 'engineering', title: 'Lead Architect' },
-  correlationId: 'req_trace_987',
-});
-```
-
-### 6.2 Member 2 AI Signals Hook
-```typescript
-import { EventIngestionService } from 'dayflow-orchestration-platform';
-
-const ingestion = EventIngestionService.getInstance();
-
-// Attach AI signals strictly as data metadata — cannot bypass auth or approval downstream
-const enrichedEvent = ingestion.attachAISignals(rawEvent, {
-  riskScore: 0.15,
-  confidence: 0.92,
-  anomalyScore: 0.04,
-  factors: ['Adequate team capacity', 'Healthy leave balance'],
-  suggestedAction: 'AUTO_APPROVE',
-  modelVersion: 'dayflow-v2-lgbm',
-});
-```
-
-### 6.3 Member 3 Read / Query & Subscription Interface
-```typescript
-import { EventIngestionService, StandardEventType } from 'dayflow-orchestration-platform';
-
-const ingestion = EventIngestionService.getInstance();
-
-// Subscribe to real-time events
-const unsubscribe = ingestion.subscribeToEvent(StandardEventType.LEAVE_APPROVED, (event) => {
-  console.log('Leave was approved for user:', event.payload.userId);
-});
-
-// Query events by correlationId or resourceId
-const sessionEvents = ingestion.getEventsByCorrelationId('req_trace_987');
-const resourceEvents = ingestion.getEventsByResource('leave', 'LR-101');
-```
-
----
-
-## 7. Idempotency & Deduplication Mechanism
-
-- **Mechanism**: In-flight memory locking + 24-hour TTL completion response cache via `IdempotencyGuard`.
-- **Key Strategy**: `idempotencyKey || eventId`.
-- **Behavior**:
-  - If an event with the same ID / key is currently in-flight, concurrent duplicates are rejected immediately with status `duplicate: true`.
-  - If an event was already processed and stored, subsequent replays return the cached completion acknowledgment safely without repeating state mutations or notification blasts.
-
+| Event Type | Producer | Consumer(s) | Resource | Key Payload Fields |
+| :--- | :--- | :--- | :--- | :--- |
+| `LeaveRequested` | Member 3 / Member 1 | Member 4 Orchestrator | `leave` | `userId`, `leaveTypeId`, `startDate`, `endDate`, `days`, `reason` |
+| `LeaveApproved` | Member 4 / Member 1 | Member 3, Member 4 Notifications | `leave` | `leaveRequestId`, `userId`, `daysDeducted`, `newBalance`, `approvedBy` |
+| `LeaveRejected` | Member 4 / Member 3 | Member 3, Member 4 Notifications | `leave` | `leaveRequestId`, `userId`, `rejectedBy`, `reason` |
+| `ApprovalRequested` | Member 4 Orchestrator | Member 3, Member 4 Notifications | `approval` | `approvalId`, `workflowId`, `requesterId`, `assignedToRoleId`, `aiRiskScore` |
+| `ApprovalCompleted` | Member 4 / Member 3 | Member 4 Orchestrator | `approval` | `approvalId`, `workflowId`, `decision`, `decidedBy`, `comments` |
+| `EmployeeUpdated` | Member 1 HR Core | Member 4 Platform, Audit | `employee` | `userId`, `departmentId`, `designation`, `reportingManagerId` |
+| `NotificationRequested` | Any Member | Member 4 Notification Service | `notification` | `recipientId`, `recipientRole`, `title`, `message`, `channels` |
+| `ActionCompleted` | Member 1 / Member 4 | Member 4 Audit, Member 3 | `workflow` | `actionName`, `resourceId`, `status: "SUCCESS"` |
+| `ActionFailed` | Member 1 / Member 4 | Member 4 Audit, Notifications | `workflow` | `workflowId`, `failedStep`, `error` |

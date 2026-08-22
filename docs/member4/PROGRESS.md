@@ -281,11 +281,50 @@
 - `tests/audit-trail.test.ts` [NEW]
 - `docs/member4/PROGRESS.md` [MODIFIED]
 
-### Next Task
-- Part 10 — Platform Observability, Health Checks, and Final PR Documentation.
-
 ### Commit
 `6cc8686` — `feat(member4): implement comprehensive audit trail component with immutable store, event-driven capture, and RBAC query API`
+
+---
+
+## Checkpoint 9 (Full Cross-Member Integration Contracts & Verification)
+**Date**: 2026-08-22  
+**Time**: 14:08 IST  
+
+### Completed
+- Verified and documented complete integration specifications for all three peer members in [`docs/member4/INTEGRATION_CONTRACTS.md`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/docs/member4/INTEGRATION_CONTRACTS.md).
+- **Member 1 (HR Core)**: Verified typed adapter [`HttpHRCoreService`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/integration/adapters/http-hr-core.adapter.ts) consuming leave balances, attendance, and payroll mutations with zero entity duplication and robust fallbacks.
+- **Member 2 (AI Engine)**: Verified typed adapter [`HttpAIEngineService`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/integration/adapters/http-ai-engine.adapter.ts) consuming risk evaluations, strictly enforcing that AI recommendations can **never bypass authentication, authorization, or deterministic verification**.
+- **Member 3 (Frontend)**: Exposed and documented full REST API surface, Server-Sent Events stream (`/api/v1/notifications/stream`), standard JSON envelopes, and structured validation error codes.
+- Created dedicated test suite [`tests/cross-member-integration.test.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/tests/cross-member-integration.test.ts) (7 tests).
+- Verified test suite: 13 test suites, **81 passed tests** (100% pass rate).
+
+### In Progress
+- Platform Observability, Health Checks, and Final PR Documentation.
+
+### Tests
+- `tests/cross-member-integration.test.ts` (Member 1 adapter, Member 1 event pub, Member 2 AI input, AI auth-barrier verification, Member 3 workflow query, Member 3 validation error formatting) — PASS (7 tests)
+- `tests/audit-trail.test.ts` — PASS (6 tests)
+- `tests/notification-pipeline.test.ts` — PASS (7 tests)
+- `tests/approval-router.test.ts` — PASS (11 tests)
+- `tests/leave-flow-e2e.test.ts` — PASS (4 tests)
+- `tests/workflow-engine.test.ts` — PASS (6 tests)
+- `tests/event-integration.test.ts` — PASS (8 tests)
+- `tests/api.test.ts` — PASS (6 tests)
+- `tests/orchestration.test.ts` — PASS (4 tests)
+- `tests/security.test.ts` — PASS (15 tests)
+- `tests/notification-sse.test.ts` — PASS (2 tests)
+- `tests/audit.test.ts` — PASS (1 test)
+- `tests/idempotency.test.ts` — PASS (2 tests)
+- **Total: 13 suites, 81 tests passing.**
+
+### Files Changed
+- `docs/member4/INTEGRATION_CONTRACTS.md` [MODIFIED]
+- `tests/cross-member-integration.test.ts` [NEW]
+- `docs/member4/PROGRESS.md` [MODIFIED]
+
+### Next Task
+- Final PR Readiness & Summary Walkthrough.
+
 
 
 
