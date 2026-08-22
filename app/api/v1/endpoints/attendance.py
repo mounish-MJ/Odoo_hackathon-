@@ -5,8 +5,10 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.attendance import CheckInResponse, CheckOutResponse, DailyAttendanceRead, WeeklyAttendanceRead
+from app.schemas.dashboard import AttendanceSummaryResponse
 from app.services.attendance_service import AttendanceService
-from app.api.deps import get_current_active_verified_user
+from app.services.analytics import AnalyticsService
+from app.api.deps import get_current_active_verified_user, enforce_self_or_admin
 
 router = APIRouter()
 
@@ -27,6 +29,19 @@ def check_out(
 ):
     """Records check-out timestamp for current authenticated employee."""
     return AttendanceService.check_out(db=db, current_user=current_user)
+
+
+@router.get("/summary", response_model=AttendanceSummaryResponse, status_code=status.HTTP_200_OK)
+def get_attendance_summary(
+    employee_id: Optional[str] = Query(None, description="Target employee ID (defaults to current user)"),
+    year_month: Optional[str] = Query(None, description="Year and month (YYYY-MM)"),
+    current_user: User = Depends(get_current_active_verified_user),
+    db: Session = Depends(get_db)
+):
+    """Calculates monthly attendance summary statistics (present days, absent days, total hours)."""
+    target_emp_id = employee_id or current_user.employee_id
+    enforce_self_or_admin(current_user, target_emp_id)
+    return AnalyticsService.get_attendance_summary(db=db, employee_id=target_emp_id, year_month=year_month)
 
 
 @router.get("/daily", response_model=DailyAttendanceRead, status_code=status.HTTP_200_OK)

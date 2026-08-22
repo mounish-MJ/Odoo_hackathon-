@@ -5,10 +5,25 @@ from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.models.leave import LeaveStatus
 from app.schemas.leave import LeaveApplyRequest, LeaveReviewRequest, LeaveRequestRead
+from app.schemas.dashboard import LeaveBalancesResponse
 from app.services.leave_service import LeaveService
-from app.api.deps import get_current_active_verified_user, require_roles
+from app.services.analytics import AnalyticsService
+from app.api.deps import get_current_active_verified_user, require_roles, enforce_self_or_admin
 
 router = APIRouter()
+
+
+@router.get("/balances", response_model=LeaveBalancesResponse, status_code=status.HTTP_200_OK)
+def get_leave_balances(
+    employee_id: Optional[str] = Query(None, description="Target employee ID (defaults to current user)"),
+    year: Optional[int] = Query(None, description="Calendar year"),
+    current_user: User = Depends(get_current_active_verified_user),
+    db: Session = Depends(get_db)
+):
+    """Calculates allocated, used, pending, and remaining leave balances."""
+    target_emp_id = employee_id or current_user.employee_id
+    enforce_self_or_admin(current_user, target_emp_id)
+    return AnalyticsService.get_leave_balances(db=db, employee_id=target_emp_id, year=year)
 
 
 @router.post("", response_model=LeaveRequestRead, status_code=status.HTTP_201_CREATED)

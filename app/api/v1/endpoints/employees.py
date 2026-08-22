@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, status
+from typing import Optional
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.schemas.employee import EmployeeRead, EmployeeSelfUpdate, EmployeeAdminUpdate
+from app.schemas.dashboard import EmployeeDashboardResponse
 from app.services.employee_service import EmployeeService
-from app.api.deps import get_current_active_verified_user, require_roles
+from app.services.analytics import AnalyticsService
+from app.api.deps import get_current_active_verified_user, require_roles, enforce_self_or_admin
 
 router = APIRouter()
 
@@ -26,6 +29,18 @@ def update_own_profile(
 ):
     """Updates permitted self-service fields (e.g. phone number) for the authenticated employee."""
     return EmployeeService.update_employee_me(db=db, current_user=current_user, data=data)
+
+
+@router.get("/dashboard", response_model=EmployeeDashboardResponse, status_code=status.HTTP_200_OK)
+def get_employee_dashboard(
+    employee_id: Optional[str] = Query(None, description="Target employee ID (defaults to current user)"),
+    current_user: User = Depends(get_current_active_verified_user),
+    db: Session = Depends(get_db)
+):
+    """Aggregates unified employee dashboard metrics (profile, attendance streak, pending leaves, latest net pay)."""
+    target_emp_id = employee_id or current_user.employee_id
+    enforce_self_or_admin(current_user, target_emp_id)
+    return AnalyticsService.get_employee_dashboard(db=db, employee_id=target_emp_id)
 
 
 @router.get("/{employee_id}", response_model=EmployeeRead, status_code=status.HTTP_200_OK)

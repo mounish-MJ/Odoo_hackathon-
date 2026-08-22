@@ -4,10 +4,25 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.schemas.payroll import PayrollCreate, PayrollUpdate, PayrollRead
+from app.schemas.dashboard import PayrollSummaryResponse
 from app.services.payroll_service import PayrollService
-from app.api.deps import get_current_active_verified_user, require_roles
+from app.services.analytics import AnalyticsService
+from app.api.deps import get_current_active_verified_user, require_roles, enforce_self_or_admin
 
 router = APIRouter()
+
+
+@router.get("/summary", response_model=PayrollSummaryResponse, status_code=status.HTTP_200_OK)
+def get_payroll_summary(
+    employee_id: Optional[str] = Query(None, description="Target employee ID (defaults to current user)"),
+    year: Optional[int] = Query(None, description="Target year"),
+    current_user: User = Depends(get_current_active_verified_user),
+    db: Session = Depends(get_db)
+):
+    """Calculates annual YTD gross salary, net salary, and total deductions using Decimal precision."""
+    target_emp_id = employee_id or current_user.employee_id
+    enforce_self_or_admin(current_user, target_emp_id)
+    return AnalyticsService.get_payroll_summary(db=db, employee_id=target_emp_id, year=year)
 
 
 @router.get("", response_model=List[PayrollRead], status_code=status.HTTP_200_OK)
