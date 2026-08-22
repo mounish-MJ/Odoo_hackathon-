@@ -167,7 +167,7 @@ class PolicyRAGService:
             query_words = set(re.findall(r'\w+', query.lower()))
             content_words = set(re.findall(r'\w+', chk["content"].lower()))
             common_count = len(query_words.intersection(content_words))
-            boosted_score = min(1.0, score + (common_count * 0.04))
+            boosted_score = min(1.0, score + (common_count * 0.10))
 
             # Apply similarity threshold filter
             if boosted_score >= settings.RAG_SIMILARITY_THRESHOLD:
