@@ -79,6 +79,7 @@ app.include_router(anomaly_router)
 
 
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["System"])
+@app.get("/api/v1/health", status_code=status.HTTP_200_OK, tags=["System"])
 def health_check():
     """Health check endpoint for platform orchestration and load balancers."""
     return {
