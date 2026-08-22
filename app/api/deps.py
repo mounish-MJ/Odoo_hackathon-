@@ -103,3 +103,38 @@ def enforce_self_or_admin(current_user: User, target_employee_id: str) -> None:
         code="FORBIDDEN",
         message="You are not authorized to access another employee's private HR data."
     )
+
+
+def resolve_employee_id(db: Session, identifier: str) -> str:
+    """
+    Resolves a string identifier (which could be an employee_id or user_id)
+    to the canonical employee_id. Raises EntityNotFoundError if not found.
+    """
+    from app.models.employee import Employee
+    from app.core.exceptions import EntityNotFoundError
+    emp = db.query(Employee).filter((Employee.id == identifier) | (Employee.user_id == identifier)).first()
+    if emp:
+        return emp.id
+    user = db.query(User).filter(User.id == identifier).first()
+    if user and user.employee_id:
+        return user.employee_id
+    raise EntityNotFoundError(entity_name="Employee/User", identifier=identifier)
+
+
+def resolve_employee(db: Session, identifier: str) -> "Employee":
+    """
+    Resolves a string identifier (which could be an employee_id or user_id)
+    to the canonical Employee object. Raises EntityNotFoundError if not found.
+    """
+    from app.models.employee import Employee
+    from app.core.exceptions import EntityNotFoundError
+    emp = db.query(Employee).filter((Employee.id == identifier) | (Employee.user_id == identifier)).first()
+    if emp:
+        return emp
+    user = db.query(User).filter(User.id == identifier).first()
+    if user and user.employee_id:
+        emp = db.query(Employee).filter(Employee.id == user.employee_id).first()
+        if emp:
+            return emp
+    raise EntityNotFoundError(entity_name="Employee/User", identifier=identifier)
+

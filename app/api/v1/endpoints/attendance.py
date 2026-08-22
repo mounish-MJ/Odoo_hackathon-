@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -8,7 +8,7 @@ from app.schemas.attendance import CheckInResponse, CheckOutResponse, DailyAtten
 from app.schemas.dashboard import AttendanceSummaryResponse
 from app.services.attendance_service import AttendanceService
 from app.services.analytics import AnalyticsService
-from app.api.deps import get_current_active_verified_user, enforce_self_or_admin
+from app.api.deps import get_current_active_verified_user, enforce_self_or_admin, resolve_employee_id
 
 router = APIRouter()
 
@@ -74,3 +74,18 @@ def get_weekly_attendance(
         ref_date=ref_date,
         target_employee_id=employee_id
     )
+
+
+@router.get("/employee/{user_id}", response_model=List[DailyAttendanceRead], status_code=status.HTTP_200_OK)
+def get_attendance_by_user(
+    user_id: str,
+    current_user: User = Depends(get_current_active_verified_user),
+    db: Session = Depends(get_db)
+):
+    """Retrieves list of attendance records for a specific user ID or employee ID."""
+    target_emp_id = resolve_employee_id(db, user_id)
+    enforce_self_or_admin(current_user, target_emp_id)
+    from app.models.attendance import Attendance
+    records = db.query(Attendance).filter(Attendance.employee_id == target_emp_id).order_by(Attendance.attendance_date.desc()).all()
+    return records
+

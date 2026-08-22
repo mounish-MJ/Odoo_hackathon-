@@ -30,3 +30,23 @@ class LeaveRequestRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class LeaveStatusUpdateRequest(BaseModel):
+    status: LeaveStatus = Field(..., description="Target leave status (APPROVED, REJECTED, CANCELLED)")
+    review_comments: Optional[str] = Field(None, description="Optional review comment or feedback")
+
+
+class LeaveDeductBalanceRequest(BaseModel):
+    user_id: str = Field(..., description="Target user ID or employee ID")
+    leave_type: LeaveType = Field(..., description="Type of leave to deduct from")
+    days: int = Field(..., gt=0, description="Number of days to deduct")
+    reason: Optional[str] = Field(None, description="Reason for balance deduction")
+
+
+class LeaveDeductBalanceResponse(BaseModel):
+    employee_id: str
+    leave_type: LeaveType
+    deducted_days: int
+    remaining_balance: int
+

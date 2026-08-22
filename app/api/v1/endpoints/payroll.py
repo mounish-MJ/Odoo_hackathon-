@@ -7,7 +7,7 @@ from app.schemas.payroll import PayrollCreate, PayrollUpdate, PayrollRead
 from app.schemas.dashboard import PayrollSummaryResponse
 from app.services.payroll_service import PayrollService
 from app.services.analytics import AnalyticsService
-from app.api.deps import get_current_active_verified_user, require_roles, enforce_self_or_admin
+from app.api.deps import get_current_active_verified_user, require_roles, enforce_self_or_admin, resolve_employee_id
 
 router = APIRouter()
 
@@ -23,6 +23,24 @@ def get_payroll_summary(
     target_emp_id = employee_id or current_user.employee_id
     enforce_self_or_admin(current_user, target_emp_id)
     return AnalyticsService.get_payroll_summary(db=db, employee_id=target_emp_id, year=year)
+
+
+@router.get("/employee/{user_id}", response_model=List[PayrollRead], status_code=status.HTTP_200_OK)
+def get_payroll_by_user(
+    user_id: str,
+    pay_period: Optional[str] = Query(None, description="Optional pay period filter (e.g. 2026-08)"),
+    current_user: User = Depends(get_current_active_verified_user),
+    db: Session = Depends(get_db)
+):
+    """Retrieves list of payroll records for a specific user ID or employee ID."""
+    target_emp_id = resolve_employee_id(db, user_id)
+    enforce_self_or_admin(current_user, target_emp_id)
+    return PayrollService.get_payroll_records(
+        db=db,
+        current_user=current_user,
+        pay_period=pay_period,
+        target_employee_id=target_emp_id
+    )
 
 
 @router.get("", response_model=List[PayrollRead], status_code=status.HTTP_200_OK)
@@ -70,3 +88,4 @@ def update_payroll_record(
 ):
     """Updates an existing payroll record and recalculates gross/net salaries (HR and Admin roles only)."""
     return PayrollService.update_payroll_record(db=db, current_user=current_user, payroll_id=payroll_id, data=data)
+
