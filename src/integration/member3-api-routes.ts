@@ -116,14 +116,17 @@ export function createPlatformRouter(
         const user = req.user!;
         const { leaveTypeId, startDate, endDate, days, reason } = req.body;
 
+        const correlationId = (req as any).correlationId || (req.headers['x-request-id'] as string) || (req.headers['x-correlation-id'] as string) || uuidv4();
+
         const event: EventContract = {
           eventId: uuidv4(),
           eventType: EventType.LEAVE_APPLIED,
           producerId: 'MEMBER_3_FRONTEND',
+          correlationId,
           idempotencyKey: (req.headers['x-idempotency-key'] as string) || uuidv4(),
           timestamp: new Date().toISOString(),
           metadata: {
-            correlationId: uuidv4(),
+            correlationId,
             userId: user.userId,
             userRole: user.role,
             ipAddress: req.ip,

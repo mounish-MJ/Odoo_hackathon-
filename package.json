@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "dev": "ts-node src/server.ts",
     "test": "jest --runInBand --detectOpenHandles --forceExit",
-    "test:smoke": "ts-node scripts/smoke-test.ts"
+    "test:smoke": "ts-node scripts/smoke-test.ts",
+    "demo:simulate": "ts-node scripts/e2e-simulation.ts"
   },
   "keywords": [
     "dayflow",
