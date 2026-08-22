@@ -481,16 +481,8 @@
 - `npm run test:smoke` — PASS (10/10 criteria verified)
 - `npm test` — PASS (15 suites, 111 tests passing)
 
-### Files Changed
-- `src/contracts/ai-intelligence.contract.ts` [NEW]
-- `src/ai/attendance-anomaly.engine.ts` [NEW]
-- `src/ai/leave-intelligence.engine.ts` [NEW]
-- `src/ai/payroll-anomaly.engine.ts` [NEW]
-- `src/ai/employee-insights.engine.ts` [NEW]
-- `src/ai/ai-orchestrator.service.ts` [NEW]
-- `src/integration/member3-api-routes.ts` [MODIFIED]
-- `tests/ai-intelligence.test.ts` [NEW]
-- `docs/member4/PROGRESS.md` [MODIFIED]
+### Commit
+`306ca15` — `feat(member4): implement AI intelligence layer for attendance anomaly, leave intelligence, payroll anomaly, and employee insights`
 
 
 
