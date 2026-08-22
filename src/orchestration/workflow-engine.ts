@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { EventContract, EventType } from '../contracts/event.contract';
+import { EventContract, StandardEventType, EventType } from '../contracts/event.contract';
 import {
   WorkflowContract,
   WorkflowContext,
@@ -11,6 +11,36 @@ import { ApprovalRouter } from './approval-router';
 import { ApprovalStatus } from '../contracts/approval.contract';
 import { IdempotencyGuard } from '../security/idempotency.guard';
 import { RetryManager } from './retry-manager';
+
+/**
+ * Valid state transition rules enforcing sequential execution.
+ * Prevents illegal jumps (e.g. INITIALIZED straight to EXECUTING_ACTION).
+ */
+export const VALID_WORKFLOW_TRANSITIONS: Record<WorkflowStatus, WorkflowStatus[]> = {
+  [WorkflowStatus.INITIALIZED]: [WorkflowStatus.VALIDATED, WorkflowStatus.FAILED],
+  [WorkflowStatus.VALIDATED]: [WorkflowStatus.PERMISSION_CHECKED, WorkflowStatus.FAILED],
+  [WorkflowStatus.PERMISSION_CHECKED]: [WorkflowStatus.RISK_ASSESSED, WorkflowStatus.FAILED],
+  [WorkflowStatus.RISK_ASSESSED]: [
+    WorkflowStatus.AWAITING_APPROVAL,
+    WorkflowStatus.EXECUTING_ACTION,
+    WorkflowStatus.FAILED,
+  ],
+  [WorkflowStatus.AWAITING_APPROVAL]: [WorkflowStatus.EXECUTING_ACTION, WorkflowStatus.FAILED],
+  [WorkflowStatus.EXECUTING_ACTION]: [WorkflowStatus.VERIFYING, WorkflowStatus.FAILED],
+  [WorkflowStatus.VERIFYING]: [WorkflowStatus.NOTIFYING, WorkflowStatus.FAILED],
+  [WorkflowStatus.NOTIFYING]: [WorkflowStatus.AUDITING, WorkflowStatus.FAILED],
+  [WorkflowStatus.AUDITING]: [WorkflowStatus.COMPLETED, WorkflowStatus.FAILED],
+  [WorkflowStatus.COMPLETED]: [],
+  [WorkflowStatus.FAILED]: [WorkflowStatus.ROLLED_BACK],
+  [WorkflowStatus.ROLLED_BACK]: [],
+};
+
+export class IllegalStateTransitionError extends Error {
+  constructor(fromStatus: WorkflowStatus, toStatus: WorkflowStatus) {
+    super(`Illegal workflow transition: Cannot transition from ${fromStatus} to ${toStatus}`);
+    this.name = 'IllegalStateTransitionError';
+  }
+}
 
 export class WorkflowEngine {
   private static instance: WorkflowEngine;
@@ -50,6 +80,10 @@ export class WorkflowEngine {
       await this.executeWorkflow('leave-request', event);
     });
 
+    this.eventBus.subscribe(StandardEventType.LEAVE_REQUESTED, async (event) => {
+      await this.executeWorkflow('leave-request', event);
+    });
+
     this.eventBus.subscribe(EventType.ATTENDANCE_ANOMALY_DETECTED, async (event) => {
       await this.executeWorkflow('attendance-anomaly', event);
     });
@@ -60,21 +94,49 @@ export class WorkflowEngine {
   }
 
   /**
+   * Transitions workflow to the next state, validating allowed state graph.
+   */
+  public transitionStatus(
+    context: WorkflowContext<any, any>,
+    nextStatus: WorkflowStatus
+  ): void {
+    const allowed = VALID_WORKFLOW_TRANSITIONS[context.status] || [];
+    if (!allowed.includes(nextStatus)) {
+      throw new IllegalStateTransitionError(context.status, nextStatus);
+    }
+    context.status = nextStatus;
+  }
+
+  /**
    * The Master 8-Step Orchestration Pipeline.
    *
-   * Event
-   * → Workflow Selection
-   * → Permission / Risk Check
-   * → Approval when required
-   * → Deterministic Action
-   * → Verification
-   * → Notification
-   * → Audit Event
+   * EVENT
+   * → WORKFLOW SELECTION
+   * → PERMISSION / RISK CHECK
+   * → APPROVAL (when required)
+   * → DETERMINISTIC ACTION
+   * → VERIFICATION
+   * → NOTIFICATION
+   * → AUDIT EVENT
    */
   public async executeWorkflow<TPayload = Record<string, unknown>, TResult = unknown>(
     workflowType: string,
     event: EventContract<TPayload>
   ): Promise<WorkflowContext<TPayload, TResult>> {
+    const idempotencyKey = event.idempotencyKey || event.eventId;
+
+    // 1. Workflow-Level Idempotency Check
+    if (idempotencyKey) {
+      const cached = IdempotencyGuard.check(idempotencyKey);
+      if (cached && cached.body) {
+        const cachedContext = cached.body as WorkflowContext<TPayload, TResult>;
+        return {
+          ...cachedContext,
+          event,
+        };
+      }
+    }
+
     const workflowId = `wf_${uuidv4().substring(0, 8)}`;
     const workflow = this.workflows.get(workflowType);
 
@@ -120,7 +182,7 @@ export class WorkflowEngine {
         throw new Error('Event validation returned false');
       }
       this.recordStep(context, '1_VALIDATION', 'SUCCESS', undefined, step1Start);
-      context.status = WorkflowStatus.VALIDATED;
+      this.transitionStatus(context, WorkflowStatus.VALIDATED);
 
       // -------------------------------------------------------------
       // Step 2: Permission & RBAC Check
@@ -131,7 +193,7 @@ export class WorkflowEngine {
         throw new Error('Authorization failed: Insufficient permissions for this workflow');
       }
       this.recordStep(context, '2_PERMISSION_CHECK', 'SUCCESS', undefined, step2Start);
-      context.status = WorkflowStatus.PERMISSION_CHECKED;
+      this.transitionStatus(context, WorkflowStatus.PERMISSION_CHECKED);
 
       // -------------------------------------------------------------
       // Step 3: AI Risk Check & Approval Routing
@@ -139,7 +201,7 @@ export class WorkflowEngine {
       const step3Start = Date.now();
       const riskEvaluation = await workflow.evaluateRisk(context);
       this.recordStep(context, '3_RISK_EVALUATION', 'SUCCESS', riskEvaluation, step3Start);
-      context.status = WorkflowStatus.RISK_ASSESSED;
+      this.transitionStatus(context, WorkflowStatus.RISK_ASSESSED);
 
       if (riskEvaluation.decision === 'REJECT') {
         throw new Error('Workflow rejected by policy during risk evaluation');
@@ -147,7 +209,7 @@ export class WorkflowEngine {
 
       // If approval is required from a human, pause execution here
       if (riskEvaluation.decision === 'REQUIRE_APPROVAL') {
-        context.status = WorkflowStatus.AWAITING_APPROVAL;
+        this.transitionStatus(context, WorkflowStatus.AWAITING_APPROVAL);
         this.recordStep(
           context,
           '4_APPROVAL_GATE',
@@ -162,7 +224,7 @@ export class WorkflowEngine {
       // Step 4: Deterministic Core Action (with retry support)
       // -------------------------------------------------------------
       const step4Start = Date.now();
-      context.status = WorkflowStatus.EXECUTING_ACTION;
+      this.transitionStatus(context, WorkflowStatus.EXECUTING_ACTION);
 
       const { result: actionResult } = await RetryManager.executeWithRetry(
         async () => {
@@ -178,7 +240,7 @@ export class WorkflowEngine {
       // Step 5: Verification
       // -------------------------------------------------------------
       const step5Start = Date.now();
-      context.status = WorkflowStatus.VERIFYING;
+      this.transitionStatus(context, WorkflowStatus.VERIFYING);
       const isVerified = await workflow.verifyAction(context, actionResult);
       if (!isVerified) {
         throw new Error('Action verification failed: Core state does not match expected result');
@@ -189,7 +251,7 @@ export class WorkflowEngine {
       // Step 6: Notification Triggering
       // -------------------------------------------------------------
       const step6Start = Date.now();
-      context.status = WorkflowStatus.NOTIFYING;
+      this.transitionStatus(context, WorkflowStatus.NOTIFYING);
       await workflow.dispatchNotifications(context);
       this.recordStep(context, '7_NOTIFICATION_DISPATCH', 'SUCCESS', undefined, step6Start);
 
@@ -197,32 +259,56 @@ export class WorkflowEngine {
       // Step 7: Audit Event Creation
       // -------------------------------------------------------------
       const step7Start = Date.now();
-      context.status = WorkflowStatus.AUDITING;
+      this.transitionStatus(context, WorkflowStatus.AUDITING);
       await workflow.recordAuditEvent(context);
       this.recordStep(context, '8_AUDIT_LOGGING', 'SUCCESS', undefined, step7Start);
 
       // Workflow successfully completed
-      context.status = WorkflowStatus.COMPLETED;
+      this.transitionStatus(context, WorkflowStatus.COMPLETED);
       context.endTime = Date.now();
 
-      // Save idempotency result if key was provided
-      if (event.idempotencyKey) {
-        IdempotencyGuard.save(event.idempotencyKey, 200, {
+      // Save idempotency result
+      if (idempotencyKey) {
+        IdempotencyGuard.save(idempotencyKey, 200, {
           workflowId: context.workflowId,
+          workflowType: context.workflowType,
           status: context.status,
           output: context.output,
+          stepResults: context.stepResults,
         });
       }
 
       return context;
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
+      const failedStep = this.getCurrentStepName(context.status);
       context.status = WorkflowStatus.FAILED;
       context.error = error;
       context.endTime = Date.now();
 
-      if (event.idempotencyKey) {
-        IdempotencyGuard.release(event.idempotencyKey);
+      // Record failed step in results
+      this.recordStep(context, failedStep, 'FAILED', { error: error.message });
+
+      // Emit ActionFailed event on event bus
+      await this.eventBus.publish({
+        eventId: uuidv4(),
+        eventType: StandardEventType.ACTION_FAILED,
+        timestamp: new Date().toISOString(),
+        actor: event.actor || { userId: 'system', role: 'SYSTEM' },
+        source: 'MEMBER_4_PLATFORM',
+        resourceType: event.resourceType || 'workflow',
+        resourceId: context.workflowId,
+        correlationId: event.correlationId || uuidv4(),
+        payload: {
+          workflowId: context.workflowId,
+          workflowType: context.workflowType,
+          failedStep,
+          error: error.message,
+        },
+      });
+
+      if (idempotencyKey) {
+        IdempotencyGuard.release(idempotencyKey);
       }
 
       await workflow.handleFailure(context, error);
@@ -259,48 +345,76 @@ export class WorkflowEngine {
     }
 
     if (decision === 'REJECTED') {
-      context.status = WorkflowStatus.FAILED;
+      this.transitionStatus(context, WorkflowStatus.FAILED);
       context.approvalStatus = ApprovalStatus.REJECTED;
       const rejectError = new Error(`Rejected by approver ${deciderId}: ${comments || 'No comments'}`);
+      this.recordStep(context, '4_APPROVAL_GATE', 'FAILED', { error: rejectError.message });
       await workflow.handleFailure(context, rejectError);
       return context;
     }
 
-    // If approved, execute remaining pipeline steps (Action -> Verify -> Notify -> Audit)
+    // If approved, proceed safely from AWAITING_APPROVAL to EXECUTING_ACTION
     context.approvalStatus = ApprovalStatus.APPROVED;
     context.assignedApproverId = deciderId;
 
     try {
       const step4Start = Date.now();
-      context.status = WorkflowStatus.EXECUTING_ACTION;
+      this.transitionStatus(context, WorkflowStatus.EXECUTING_ACTION);
       const actionResult = await workflow.executeDeterministicAction(context);
       context.output = actionResult;
       this.recordStep(context, '5_DETERMINISTIC_ACTION', 'SUCCESS', actionResult, step4Start);
 
       const step5Start = Date.now();
-      context.status = WorkflowStatus.VERIFYING;
+      this.transitionStatus(context, WorkflowStatus.VERIFYING);
       await workflow.verifyAction(context, actionResult);
       this.recordStep(context, '6_VERIFICATION', 'SUCCESS', undefined, step5Start);
 
       const step6Start = Date.now();
-      context.status = WorkflowStatus.NOTIFYING;
+      this.transitionStatus(context, WorkflowStatus.NOTIFYING);
       await workflow.dispatchNotifications(context);
       this.recordStep(context, '7_NOTIFICATION_DISPATCH', 'SUCCESS', undefined, step6Start);
 
       const step7Start = Date.now();
-      context.status = WorkflowStatus.AUDITING;
+      this.transitionStatus(context, WorkflowStatus.AUDITING);
       await workflow.recordAuditEvent(context);
       this.recordStep(context, '8_AUDIT_LOGGING', 'SUCCESS', undefined, step7Start);
 
-      context.status = WorkflowStatus.COMPLETED;
+      this.transitionStatus(context, WorkflowStatus.COMPLETED);
       context.endTime = Date.now();
       return context;
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
+      const failedStep = this.getCurrentStepName(context.status);
       context.status = WorkflowStatus.FAILED;
       context.error = error;
+      context.endTime = Date.now();
+      this.recordStep(context, failedStep, 'FAILED', { error: error.message });
       await workflow.handleFailure(context, error);
       return context;
+    }
+  }
+
+  private getCurrentStepName(status: WorkflowStatus): string {
+    switch (status) {
+      case WorkflowStatus.INITIALIZED:
+        return '1_VALIDATION';
+      case WorkflowStatus.VALIDATED:
+        return '2_PERMISSION_CHECK';
+      case WorkflowStatus.PERMISSION_CHECKED:
+        return '3_RISK_EVALUATION';
+      case WorkflowStatus.RISK_ASSESSED:
+      case WorkflowStatus.AWAITING_APPROVAL:
+        return '4_APPROVAL_GATE';
+      case WorkflowStatus.EXECUTING_ACTION:
+        return '5_DETERMINISTIC_ACTION';
+      case WorkflowStatus.VERIFYING:
+        return '6_VERIFICATION';
+      case WorkflowStatus.NOTIFYING:
+        return '7_NOTIFICATION_DISPATCH';
+      case WorkflowStatus.AUDITING:
+        return '8_AUDIT_LOGGING';
+      default:
+        return 'WORKFLOW_EXECUTION';
     }
   }
 

@@ -68,6 +68,43 @@
 ### Commit
 `7be1737` — `merge(member4): integrate Member 1 and Member 2 codebase with Member 4 platform foundation`
 
+---
+
+## Checkpoint 4 (Core Workflow Orchestration Engine)
+**Date**: 2026-08-22  
+**Time**: 13:23 IST  
+
+### Completed
+- Implemented reusable, workflow-agnostic `WorkflowEngine` driving the mandatory sequence: `EVENT → WORKFLOW → PERMISSION/RISK CHECK → APPROVAL (if required) → DETERMINISTIC ACTION → VERIFICATION → NOTIFICATION → AUDIT EVENT`.
+- Enforced safe state transitions with `VALID_WORKFLOW_TRANSITIONS` state machine graph preventing illegal privilege jumps.
+- Implemented workflow-level idempotency preventing duplicate execution of completed deterministic actions on event replay.
+- Built comprehensive failure handling: preserves error and step diagnostics, sets status `FAILED`, emits `ActionFailed` event on the bus, and triggers `handleFailure` audit logging.
+- Created test suite [`tests/workflow-engine.test.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/tests/workflow-engine.test.ts) (6 dedicated tests).
+- Verified test suite: 8 test suites, **46 passed tests** (100% pass rate).
+
+### In Progress
+- Awaiting confirmation to proceed to Part 6 (Leave Request Business Workflow wiring).
+
+### Tests
+- `tests/workflow-engine.test.ts` (Reusable engine, safe transitions, workflow idempotency, failure context, permission gates) — PASS (6 tests)
+- `tests/event-integration.test.ts` — PASS (8 tests)
+- `tests/api.test.ts` — PASS (6 tests)
+- `tests/orchestration.test.ts` — PASS (4 tests)
+- `tests/security.test.ts` — PASS (15 tests)
+- `tests/notification-sse.test.ts` — PASS (2 tests)
+- `tests/audit.test.ts` — PASS (1 test)
+- `tests/idempotency.test.ts` — PASS (2 tests)
+- **Total: 8 suites, 46 tests passing.**
+
+### Files Changed
+- `src/orchestration/workflow-engine.ts` [MODIFIED]
+- `tests/workflow-engine.test.ts` [NEW]
+- `docs/member4/PROGRESS.md` [MODIFIED]
+
+### Next Task
+- Part 6 — Wiring specific Leave Request workflow.
+
+
 
 ---
 
