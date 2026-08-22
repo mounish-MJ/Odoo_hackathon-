@@ -145,6 +145,9 @@
 ### Next Task
 - Part 7 — Full Platform Integration & Operational Hardening.
 
+### Commit
+`93c88be` — `feat(member4): wire leave approval workflow end-to-end with attendance updates, HTTP adapters, and frontend state querying`
+
 
 
 
