@@ -1,10 +1,11 @@
 import pytest
+import httpx
 from fastapi.testclient import TestClient
 from src.main import app
 from src.services.llm_service import llm_service
 from src.services.policy_rag import policy_rag_service, PolicyIngestRequest
 from src.services.tool_router import tool_router
-from src.adapters.member1_adapter import member1_adapter
+from src.adapters.member1_adapter import member1_adapter, Member1APIAdapter
 from src.security.guardrails import sanitize_and_check_guardrails
 
 client = TestClient(app)
@@ -44,7 +45,6 @@ def test_leave_preview_requires_confirmation():
 
 
 def test_leave_confirmation_invokes_member1_api():
-    # Step 1: Request Preview
     preview_res = tool_router.route_chat_query(
         message="I need casual leave tomorrow",
         user_id="usr_88392",
@@ -52,7 +52,6 @@ def test_leave_confirmation_invokes_member1_api():
     )
     token = preview_res.suggested_action.parameters["confirm_token"]
 
-    # Step 2: User Confirms Action
     confirm_res = tool_router.route_chat_query(
         message="Confirm",
         user_id="usr_88392",
@@ -87,7 +86,7 @@ def test_unauthorized_salary_query():
 def test_api_cross_employee_leave_eval_denial():
     headers = {"X-User-ID": "usr_88392", "X-User-Role": "EMPLOYEE"}
     payload = {
-        "user_id": "usr_99102", # Another employee
+        "user_id": "usr_99102",
         "leave_type": "PAID",
         "start_date": "2026-09-01",
         "end_date": "2026-09-02",
@@ -141,6 +140,58 @@ def test_policy_idempotent_ingestion():
     res1 = policy_rag_service.ingest_policy(req)
     assert res1.status in ["SUCCESS", "SKIPPED_ALREADY_EXISTS"]
 
-    # Re-ingest exact same policy
     res2 = policy_rag_service.ingest_policy(req)
     assert res2.status == "SKIPPED_ALREADY_EXISTS"
+
+
+# 6. Failure Mode Tests (STEP 6)
+def test_failure_mode_missing_confirmation_token():
+    confirm_res = tool_router.route_chat_query(
+        message="Confirm",
+        user_id="usr_88392",
+        user_role="EMPLOYEE",
+        confirm=True,
+        confirm_token="tok_invalid_expired"
+    )
+    assert confirm_res.intent == "ACT_FAILED"
+    assert "expired or invalid" in confirm_res.message
+
+
+def test_failure_mode_http_400_handling():
+    adapter = Member1APIAdapter()
+    resp = httpx.Response(400, text="Invalid leave dates")
+    result = adapter._handle_http_error(resp)
+    assert result["status"] == "ERROR"
+    assert result["error_code"] == "BAD_REQUEST"
+
+
+def test_failure_mode_http_401_handling():
+    adapter = Member1APIAdapter()
+    resp = httpx.Response(401, text="Unauthorized token")
+    result = adapter._handle_http_error(resp)
+    assert result["status"] == "ERROR"
+    assert result["error_code"] == "UNAUTHORIZED"
+
+
+def test_failure_mode_http_403_handling():
+    adapter = Member1APIAdapter()
+    resp = httpx.Response(403, text="Forbidden access")
+    result = adapter._handle_http_error(resp)
+    assert result["status"] == "ERROR"
+    assert result["error_code"] == "FORBIDDEN"
+
+
+def test_failure_mode_http_500_handling():
+    adapter = Member1APIAdapter()
+    resp = httpx.Response(500, text="Member 1 internal error")
+    result = adapter._handle_http_error(resp)
+    assert result["status"] == "ERROR"
+    assert result["error_code"] == "SERVER_ERROR"
+
+
+def test_failure_mode_duplicate_submission():
+    adapter = Member1APIAdapter()
+    resp = httpx.Response(409, text="Leave request already exists for these dates")
+    result = adapter._handle_http_error(resp)
+    assert result["status"] == "ERROR"
+    assert result["error_code"] == "DUPLICATE_SUBMISSION"

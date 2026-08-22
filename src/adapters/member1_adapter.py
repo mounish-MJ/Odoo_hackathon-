@@ -24,14 +24,38 @@ class Member1APIAdapter:
         except Exception:
             return False
 
+    def _handle_http_error(self, resp: httpx.Response) -> Dict[str, Any]:
+        """Maps Member 1 HTTP error status codes to safe, structured error objects."""
+        code_map = {
+            400: "BAD_REQUEST",
+            401: "UNAUTHORIZED",
+            403: "FORBIDDEN",
+            404: "NOT_FOUND",
+            409: "DUPLICATE_SUBMISSION",
+            500: "SERVER_ERROR"
+        }
+        err_code = code_map.get(resp.status_code, "API_ERROR")
+        logger.warning(f"Member 1 API error ({resp.status_code}): {resp.text}")
+        return {
+            "status": "ERROR",
+            "error_code": err_code,
+            "status_code": resp.status_code,
+            "message": f"Member 1 HR API Error ({resp.status_code}): {resp.text or err_code}"
+        }
+
     def get_employee_profile(self, user_id: str, auth_token: Optional[str] = None) -> Dict[str, Any]:
         """Fetches employee profile via Member 1 API: GET /api/v1/employees/:id"""
         if self.is_live_api_available():
             headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else {}
-            with httpx.Client(timeout=5.0) as client:
-                resp = client.get(f"{self.base_url}/api/v1/employees/{user_id}", headers=headers)
-                if resp.status_code == 200:
-                    return resp.json()
+            try:
+                with httpx.Client(timeout=5.0) as client:
+                    resp = client.get(f"{self.base_url}/api/v1/employees/{user_id}", headers=headers)
+                    if resp.status_code == 200:
+                        return resp.json()
+                    return self._handle_http_error(resp)
+            except Exception as e:
+                logger.error(f"Failed to fetch employee profile: {e}")
+                return {"status": "ERROR", "error_code": "NETWORK_ERROR", "message": str(e)}
 
         # Isolated Test Fixture Mode (Clearly marked and logged)
         logger.info(f"[MEMBER 1 ADAPTER: TEST FIXTURE MODE] Returning employee profile for {user_id}")
@@ -48,10 +72,15 @@ class Member1APIAdapter:
         """Fetches leave balances via Member 1 API: GET /api/v1/leaves/balances?user_id=:id"""
         if self.is_live_api_available():
             headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else {}
-            with httpx.Client(timeout=5.0) as client:
-                resp = client.get(f"{self.base_url}/api/v1/leaves/balances", params={"user_id": user_id}, headers=headers)
-                if resp.status_code == 200:
-                    return resp.json()
+            try:
+                with httpx.Client(timeout=5.0) as client:
+                    resp = client.get(f"{self.base_url}/api/v1/leaves/balances", params={"user_id": user_id}, headers=headers)
+                    if resp.status_code == 200:
+                        return resp.json()
+                    return self._handle_http_error(resp)
+            except Exception as e:
+                logger.error(f"Failed to fetch leave balances: {e}")
+                return {"status": "ERROR", "error_code": "NETWORK_ERROR", "message": str(e)}
 
         logger.info(f"[MEMBER 1 ADAPTER: TEST FIXTURE MODE] Returning leave balances for {user_id}")
         return {
@@ -65,10 +94,15 @@ class Member1APIAdapter:
         """Fetches attendance summary via Member 1 API: GET /api/v1/attendance/summary?user_id=:id"""
         if self.is_live_api_available():
             headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else {}
-            with httpx.Client(timeout=5.0) as client:
-                resp = client.get(f"{self.base_url}/api/v1/attendance/summary", params={"user_id": user_id}, headers=headers)
-                if resp.status_code == 200:
-                    return resp.json()
+            try:
+                with httpx.Client(timeout=5.0) as client:
+                    resp = client.get(f"{self.base_url}/api/v1/attendance/summary", params={"user_id": user_id}, headers=headers)
+                    if resp.status_code == 200:
+                        return resp.json()
+                    return self._handle_http_error(resp)
+            except Exception as e:
+                logger.error(f"Failed to fetch attendance summary: {e}")
+                return {"status": "ERROR", "error_code": "NETWORK_ERROR", "message": str(e)}
 
         logger.info(f"[MEMBER 1 ADAPTER: TEST FIXTURE MODE] Returning attendance summary for {user_id}")
         return {
@@ -88,10 +122,15 @@ class Member1APIAdapter:
             params = {"month": month, "year": year}
             if department:
                 params["department"] = department
-            with httpx.Client(timeout=5.0) as client:
-                resp = client.get(f"{self.base_url}/api/v1/payroll/summary", params=params, headers=headers)
-                if resp.status_code == 200:
-                    return resp.json()
+            try:
+                with httpx.Client(timeout=5.0) as client:
+                    resp = client.get(f"{self.base_url}/api/v1/payroll/summary", params=params, headers=headers)
+                    if resp.status_code == 200:
+                        return resp.json()
+                    return [self._handle_http_error(resp)]
+            except Exception as e:
+                logger.error(f"Failed to fetch payroll summary: {e}")
+                return [{"status": "ERROR", "error_code": "NETWORK_ERROR", "message": str(e)}]
 
         logger.info(f"[MEMBER 1 ADAPTER: TEST FIXTURE MODE] Returning payroll summary for {month}/{year}")
         return [
@@ -132,10 +171,15 @@ class Member1APIAdapter:
 
         if self.is_live_api_available():
             headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else {}
-            with httpx.Client(timeout=5.0) as client:
-                resp = client.post(f"{self.base_url}/api/v1/leaves/request", json=payload, headers=headers)
-                if resp.status_code in [200, 201]:
-                    return resp.json()
+            try:
+                with httpx.Client(timeout=5.0) as client:
+                    resp = client.post(f"{self.base_url}/api/v1/leaves/request", json=payload, headers=headers)
+                    if resp.status_code in [200, 201]:
+                        return resp.json()
+                    return self._handle_http_error(resp)
+            except Exception as e:
+                logger.error(f"Failed to execute leave request: {e}")
+                return {"status": "ERROR", "error_code": "NETWORK_ERROR", "message": str(e)}
 
         logger.info(f"[MEMBER 1 ADAPTER: TEST FIXTURE MODE] Executed Member 1 leave creation API for {user_id}")
         return {
