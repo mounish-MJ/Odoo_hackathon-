@@ -1,4 +1,4 @@
-# HR Core API Contract Specification (Phase 1, 2, 3, 4, 5 & 6)
+# HR Core API Contract Specification (Phase 1, 2, 3, 4, 5, 6 & 7)
 
 All endpoints return structured JSON responses.
 
@@ -152,21 +152,21 @@ All endpoints return structured JSON responses.
 
 ### `POST /api/v1/ai/chat`
 - **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
-- **Request Body**:
-  ```json
-  {
-    "message": "Show my attendance for this week",
-    "conversation_id": "optional-session-id",
-    "confirmed": false
-  }
-  ```
-- **Response Body**:
-  ```json
-  {
-    "conversation_id": "session-uuid",
-    "status": "completed",
-    "message": "You were present for 5 of 5 working days this week.",
-    "confirmation": null
-  }
-  ```
-- **Description**: Interacts with the Secure HR Conversational Agent. Resolves user intent, executes role-filtered tools via `ToolExecutionEngine`, manages multi-turn history with user session isolation, handles write confirmations, and returns human-readable responses.
+- **Request Body**: `{"message": "...", "conversation_id": "...", "confirmed": boolean}`
+- **Description**: Interacts with the HR Conversational Agent.
+
+---
+
+## 9. AI Workflow Orchestration APIs (Phase 7)
+
+### `GET /api/v1/ai/workflows/{workflow_id}`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Description**: Retrieves workflow state, step progress, and execution logs. Enforces workflow ownership.
+
+### `POST /api/v1/ai/workflows/{workflow_id}/confirm`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Description**: Confirms and executes the pending write step of a workflow. Validates SHA-256 confirmation hash and checks timeout expiration.
+
+### `POST /api/v1/ai/workflows/{workflow_id}/cancel`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Description**: Cancels a pending workflow session and marks remaining steps as `CANCELLED`.

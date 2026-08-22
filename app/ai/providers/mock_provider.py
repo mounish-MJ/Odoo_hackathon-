@@ -34,45 +34,15 @@ class MockLLMProvider(LLMProvider):
         user_msgs = [m for m in messages if m.role == "user"]
         text = user_msgs[-1].content.lower() if user_msgs and user_msgs[-1].content else ""
 
+        # Refuse prompt injections directly
+        if any(term in text for term in ["override", "ignore rbac", "grant user role", "raw sql", "reveal internal", "jwt_secret_key"]):
+            return LLMResponse(
+                content="Request denied: Security override or credential access is strictly prohibited.",
+                finish_reason="stop"
+            )
+
         # Map natural language intents to tools
-        if "profile" in text or "who am i" in text:
-            return LLMResponse(
-                tool_calls=[{"id": "call_1", "function": {"name": "get_employee_profile", "arguments": "{}"}}],
-                finish_reason="tool_calls"
-            )
-        elif "weekly attendance" in text or "worked this week" in text or "days present" in text:
-            return LLMResponse(
-                tool_calls=[{"id": "call_2", "function": {"name": "get_weekly_attendance", "arguments": "{}"}}],
-                finish_reason="tool_calls"
-            )
-        elif "daily attendance" in text or "attendance today" in text or "work today" in text or "attendance" in text:
-            return LLMResponse(
-                tool_calls=[{"id": "call_3", "function": {"name": "get_attendance", "arguments": "{}"}}],
-                finish_reason="tool_calls"
-            )
-        elif "pending leave" in text:
-            return LLMResponse(
-                tool_calls=[{"id": "call_4", "function": {"name": "get_leave_requests", "arguments": '{"status": "PENDING"}'}}],
-                finish_reason="tool_calls"
-            )
-        elif "leave request" in text or "my leaves" in text:
-            return LLMResponse(
-                tool_calls=[{"id": "call_5", "function": {"name": "get_leave_requests", "arguments": "{}"}}],
-                finish_reason="tool_calls"
-            )
-        elif "apply" in text and "leave" in text:
-            # Simple extraction for demo mock
-            return LLMResponse(
-                tool_calls=[{
-                    "id": "call_6",
-                    "function": {
-                        "name": "apply_leave",
-                        "arguments": '{"leave_type": "ANNUAL", "start_date": "2026-11-10", "end_date": "2026-11-12", "reason": "Family vacation"}'
-                    }
-                }],
-                finish_reason="tool_calls"
-            )
-        elif "approve leave" in text:
+        if "approve leave" in text:
             return LLMResponse(
                 tool_calls=[{
                     "id": "call_7",
@@ -94,11 +64,6 @@ class MockLLMProvider(LLMProvider):
                 }],
                 finish_reason="tool_calls"
             )
-        elif "payroll" in text or "salary" in text or "payslip" in text:
-            return LLMResponse(
-                tool_calls=[{"id": "call_9", "function": {"name": "get_payroll", "arguments": "{}"}}],
-                finish_reason="tool_calls"
-            )
         elif "create payroll" in text:
             return LLMResponse(
                 tool_calls=[{
@@ -108,6 +73,47 @@ class MockLLMProvider(LLMProvider):
                         "arguments": '{"employee_id": "emp_123", "pay_period": "2026-08", "basic_salary": "5000.00"}'
                     }
                 }],
+                finish_reason="tool_calls"
+            )
+        elif "apply" in text and "leave" in text:
+            return LLMResponse(
+                tool_calls=[{
+                    "id": "call_6",
+                    "function": {
+                        "name": "apply_leave",
+                        "arguments": '{"leave_type": "ANNUAL", "start_date": "2026-11-10", "end_date": "2026-11-12", "reason": "Family vacation"}'
+                    }
+                }],
+                finish_reason="tool_calls"
+            )
+        elif "pending leave" in text:
+            return LLMResponse(
+                tool_calls=[{"id": "call_4", "function": {"name": "get_leave_requests", "arguments": '{"status": "PENDING"}'}}],
+                finish_reason="tool_calls"
+            )
+        elif "leave" in text:
+            return LLMResponse(
+                tool_calls=[{"id": "call_5", "function": {"name": "get_leave_requests", "arguments": "{}"}}],
+                finish_reason="tool_calls"
+            )
+        elif "payroll" in text or "salary" in text or "payslip" in text:
+            return LLMResponse(
+                tool_calls=[{"id": "call_9", "function": {"name": "get_payroll", "arguments": "{}"}}],
+                finish_reason="tool_calls"
+            )
+        elif "weekly attendance" in text or "worked this week" in text or "days present" in text:
+            return LLMResponse(
+                tool_calls=[{"id": "call_2", "function": {"name": "get_weekly_attendance", "arguments": "{}"}}],
+                finish_reason="tool_calls"
+            )
+        elif "attendance" in text or "work today" in text or "worked today" in text:
+            return LLMResponse(
+                tool_calls=[{"id": "call_3", "function": {"name": "get_attendance", "arguments": "{}"}}],
+                finish_reason="tool_calls"
+            )
+        elif "profile" in text or "who am i" in text or "details" in text:
+            return LLMResponse(
+                tool_calls=[{"id": "call_1", "function": {"name": "get_employee_profile", "arguments": "{}"}}],
                 finish_reason="tool_calls"
             )
         else:
