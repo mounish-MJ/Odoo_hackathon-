@@ -1,3 +1,8 @@
+# Node.js & TypeScript
+node_modules/
+dist/
+coverage/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -6,7 +11,6 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -25,8 +29,12 @@ wheels/
 venv/
 ENV/
 
-# Environment Variables
+# Environment Variables & Secrets
 .env
+.env.local
+.env.production
+*.pem
+*.key
 
 # Database
 *.db
@@ -38,12 +46,13 @@ ENV/
 .idea/
 *.swp
 *.swo
+.DS_Store
+Thumbs.db
 
 # Testing & Coverage
 .pytest_cache/
 .coverage
 htmlcov/
-.pytest_cache/
 
 # Logs
 *.log
