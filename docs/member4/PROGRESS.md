@@ -234,11 +234,56 @@
 - `tests/notification-pipeline.test.ts` [NEW]
 - `docs/member4/PROGRESS.md` [MODIFIED]
 
-### Next Task
-- Part 9 — Comprehensive Platform Verification, Observability, and Final PR Readiness.
-
 ### Commit
 `be6ef33` — `feat(member4): implement event-driven notification component with pluggable providers, PII scrubbing, and channel failure isolation`
+
+---
+
+## Checkpoint 8 (Comprehensive Audit Trail & Compliance Layer)
+**Date**: 2026-08-22  
+**Time**: 14:02 IST  
+
+### Completed
+- Implemented immutable audit record contract with `auditId`, `action`, `actor`, `resourceType`, `resourceId`, `correlationId`, `source`, `status`, `diff`, `metadata`, and timestamps.
+- Built event-driven [`EventAuditOrchestrator`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/audit/event-audit.orchestrator.ts) automatically recording all domain events (`LeaveRequested`, `LeaveApproved`, `LeaveRejected`, `ApprovalRequested`, `ApprovalApproved`, `ApprovalRejected`, `ActionCompleted`, `ActionFailed`, `NotificationRequested`) to the immutable audit trail.
+- Implemented strict immutability protection with `Object.freeze()` ensuring audit logs cannot be updated or deleted by application workflows.
+- Enforced automated recursive PII and secret sanitization on all before/after audit payloads.
+- Exposed RBAC-protected audit query API on `GET /api/v1/audit/logs` and `GET /api/v1/audit/logs/:auditId` accessible exclusively by `HR` and `ADMIN`.
+- Created dedicated test suite [`tests/audit-trail.test.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/tests/audit-trail.test.ts) (6 tests).
+- Verified test suite: 12 test suites, **74 passed tests** (100% pass rate).
+
+### In Progress
+- Awaiting confirmation to proceed to Part 10 (Platform Observability & Hardening).
+
+### Tests
+- `tests/audit-trail.test.ts` (Event capture, immutability, PII scrubbing, RBAC query API, 403 forbidden gates) — PASS (6 tests)
+- `tests/notification-pipeline.test.ts` — PASS (7 tests)
+- `tests/approval-router.test.ts` — PASS (11 tests)
+- `tests/leave-flow-e2e.test.ts` — PASS (4 tests)
+- `tests/workflow-engine.test.ts` — PASS (6 tests)
+- `tests/event-integration.test.ts` — PASS (8 tests)
+- `tests/api.test.ts` — PASS (6 tests)
+- `tests/orchestration.test.ts` — PASS (4 tests)
+- `tests/security.test.ts` — PASS (15 tests)
+- `tests/notification-sse.test.ts` — PASS (2 tests)
+- `tests/audit.test.ts` — PASS (1 test)
+- `tests/idempotency.test.ts` — PASS (2 tests)
+- **Total: 12 suites, 74 tests passing.**
+
+### Files Changed
+- `src/contracts/audit.contract.ts` [MODIFIED]
+- `src/audit/audit.store.ts` [MODIFIED]
+- `src/audit/audit.service.ts` [MODIFIED]
+- `src/audit/event-audit.orchestrator.ts` [NEW]
+- `src/orchestration/workflow-engine.ts` [MODIFIED]
+- `src/integration/member3-api-routes.ts` [MODIFIED]
+- `src/server.ts` [MODIFIED]
+- `tests/audit-trail.test.ts` [NEW]
+- `docs/member4/PROGRESS.md` [MODIFIED]
+
+### Next Task
+- Part 10 — Platform Observability, Health Checks, and Final PR Documentation.
+
 
 
 

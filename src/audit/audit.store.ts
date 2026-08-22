@@ -1,17 +1,8 @@
-import { AuditRecord } from '../contracts/audit.contract';
+import { AuditRecord, AuditQueryFilters } from '../contracts/audit.contract';
 
 export interface IAuditStore {
   save(record: AuditRecord): Promise<void>;
-  query(filters: {
-    userId?: string;
-    resourceType?: string;
-    resourceId?: string;
-    action?: string;
-    startDate?: string;
-    endDate?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ logs: AuditRecord[]; total: number }>;
+  query(filters: AuditQueryFilters): Promise<{ logs: AuditRecord[]; total: number }>;
   clear(): Promise<void>;
 }
 
@@ -19,33 +10,39 @@ export class InMemoryAuditStore implements IAuditStore {
   private records: AuditRecord[] = [];
 
   public async save(record: AuditRecord): Promise<void> {
-    // Immutable append
+    // Strictly immutable store: freezes object and pushes to immutable ledger
     this.records.unshift(Object.freeze({ ...record }));
   }
 
-  public async query(filters: {
-    userId?: string;
-    resourceType?: string;
-    resourceId?: string;
-    action?: string;
-    startDate?: string;
-    endDate?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ logs: AuditRecord[]; total: number }> {
+  public async query(filters: AuditQueryFilters): Promise<{ logs: AuditRecord[]; total: number }> {
     let filtered = [...this.records];
 
     if (filters.userId) {
       filtered = filtered.filter((r) => r.userId === filters.userId);
     }
     if (filters.resourceType) {
-      filtered = filtered.filter((r) => r.resourceType.toLowerCase() === filters.resourceType?.toLowerCase());
+      filtered = filtered.filter(
+        (r) => r.resourceType.toLowerCase() === filters.resourceType?.toLowerCase()
+      );
     }
     if (filters.resourceId) {
       filtered = filtered.filter((r) => r.resourceId === filters.resourceId);
     }
     if (filters.action) {
-      filtered = filtered.filter((r) => r.action.toLowerCase().includes(filters.action?.toLowerCase() || ''));
+      filtered = filtered.filter((r) =>
+        r.action.toLowerCase().includes(filters.action?.toLowerCase() || '')
+      );
+    }
+    if (filters.source) {
+      filtered = filtered.filter(
+        (r) => r.source?.toLowerCase() === filters.source?.toLowerCase()
+      );
+    }
+    if (filters.correlationId) {
+      filtered = filtered.filter((r) => r.correlationId === filters.correlationId);
+    }
+    if (filters.status) {
+      filtered = filtered.filter((r) => r.status === filters.status);
     }
     if (filters.startDate) {
       filtered = filtered.filter((r) => new Date(r.timestamp) >= new Date(filters.startDate!));
@@ -59,7 +56,10 @@ export class InMemoryAuditStore implements IAuditStore {
     const limit = filters.limit || 50;
     const paginated = filtered.slice(offset, offset + limit);
 
-    return { logs: paginated, total };
+    return {
+      logs: paginated,
+      total,
+    };
   }
 
   public async clear(): Promise<void> {

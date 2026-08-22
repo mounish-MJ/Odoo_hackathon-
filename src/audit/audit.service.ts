@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { AuditRecord, AuditEventContract } from '../contracts/audit.contract';
+import { AuditRecord, AuditEventContract, AuditQueryFilters } from '../contracts/audit.contract';
 import { IAuditStore, InMemoryAuditStore } from './audit.store';
 import { PiiSanitizer } from '../security/pii.sanitizer';
 
@@ -24,10 +24,10 @@ export class AuditService implements AuditEventContract {
   public async recordAudit(
     recordData: Omit<AuditRecord, 'auditId' | 'timestamp'>
   ): Promise<AuditRecord> {
-    const auditId = uuidv4();
+    const auditId = `aud_${uuidv4().substring(0, 8)}`;
     const timestamp = new Date().toISOString();
 
-    // 1. Sanitize payloads to guarantee zero PII leakage
+    // 1. Sanitize payloads to guarantee zero PII or secret leakage
     const sanitizedOld = recordData.oldData ? PiiSanitizer.sanitize(recordData.oldData) : null;
     const sanitizedNew = recordData.newData ? PiiSanitizer.sanitize(recordData.newData) : null;
     const diff = PiiSanitizer.computeDiff(sanitizedOld, sanitizedNew);
@@ -41,6 +41,8 @@ export class AuditService implements AuditEventContract {
       action: recordData.action,
       resourceType: recordData.resourceType,
       resourceId: recordData.resourceId,
+      source: recordData.source || 'MEMBER_4_PLATFORM',
+      correlationId: recordData.correlationId,
       oldData: sanitizedOld,
       newData: sanitizedNew,
       diff,
@@ -56,18 +58,11 @@ export class AuditService implements AuditEventContract {
   }
 
   /**
-   * Queries the audit trail.
+   * Queries the audit trail with rich filters.
    */
-  public async queryAuditLogs(filters: {
-    userId?: string;
-    resourceType?: string;
-    resourceId?: string;
-    action?: string;
-    startDate?: string;
-    endDate?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ logs: AuditRecord[]; total: number }> {
+  public async queryAuditLogs(
+    filters: AuditQueryFilters = {}
+  ): Promise<{ logs: AuditRecord[]; total: number }> {
     return this.store.query(filters);
   }
 

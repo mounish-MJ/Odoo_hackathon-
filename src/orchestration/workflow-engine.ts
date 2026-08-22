@@ -76,10 +76,6 @@ export class WorkflowEngine {
    * Automatically wires event bus triggers to workflows.
    */
   private wireEventBusListeners(): void {
-    this.eventBus.subscribe(EventType.LEAVE_APPLIED, async (event) => {
-      await this.executeWorkflow('leave-request', event);
-    });
-
     this.eventBus.subscribe(StandardEventType.LEAVE_REQUESTED, async (event) => {
       await this.executeWorkflow('leave-request', event);
     });

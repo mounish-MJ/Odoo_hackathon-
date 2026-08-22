@@ -1,11 +1,19 @@
-export interface AuditRecord {
-  auditId: string;
+export interface AuditActor {
   userId?: string;
   userEmail?: string;
   userRole?: string;
+}
+
+export interface AuditRecord {
+  auditId: string;
   action: string;
+  userId?: string;
+  userEmail?: string;
+  userRole?: string;
   resourceType: string;
   resourceId?: string;
+  source?: string;
+  correlationId?: string;
   oldData?: Record<string, unknown> | null;
   newData?: Record<string, unknown> | null;
   diff?: Record<string, { from: unknown; to: unknown }>;
@@ -48,16 +56,21 @@ export const SENSITIVE_PII_FIELDS: string[] = [
   'mfaSecret',
 ];
 
+export interface AuditQueryFilters {
+  userId?: string;
+  resourceType?: string;
+  resourceId?: string;
+  action?: string;
+  source?: string;
+  correlationId?: string;
+  status?: 'SUCCESS' | 'FAILURE';
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export interface AuditEventContract {
   recordAudit(record: Omit<AuditRecord, 'auditId' | 'timestamp'>): Promise<AuditRecord>;
-  queryAuditLogs(filters: {
-    userId?: string;
-    resourceType?: string;
-    resourceId?: string;
-    action?: string;
-    startDate?: string;
-    endDate?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ logs: AuditRecord[]; total: number }>;
+  queryAuditLogs(filters: AuditQueryFilters): Promise<{ logs: AuditRecord[]; total: number }>;
 }

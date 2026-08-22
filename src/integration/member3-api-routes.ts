@@ -379,11 +379,30 @@ export function createPlatformRouter(
     AuthSecurityService.authenticate,
     RbacSecurityGuard.requireRoles(Role.HR, Role.ADMIN),
     async (req: AuthenticatedRequest, res: Response) => {
-      const { userId, resourceType, action, limit, offset } = req.query;
+      const {
+        userId,
+        resourceType,
+        resourceId,
+        action,
+        source,
+        correlationId,
+        status,
+        startDate,
+        endDate,
+        limit,
+        offset,
+      } = req.query;
+
       const logs = await auditService.queryAuditLogs({
         userId: userId as string,
         resourceType: resourceType as string,
+        resourceId: resourceId as string,
         action: action as string,
+        source: source as string,
+        correlationId: correlationId as string,
+        status: status as 'SUCCESS' | 'FAILURE',
+        startDate: startDate as string,
+        endDate: endDate as string,
         limit: limit ? parseInt(limit as string) : 50,
         offset: offset ? parseInt(offset as string) : 0,
       });
@@ -392,6 +411,30 @@ export function createPlatformRouter(
         success: true,
         data: logs.logs,
         total: logs.total,
+      });
+    }
+  );
+
+  router.get(
+    '/audit/logs/:auditId',
+    AuthSecurityService.authenticate,
+    RbacSecurityGuard.requireRoles(Role.HR, Role.ADMIN),
+    async (req: AuthenticatedRequest, res: Response) => {
+      const { auditId } = req.params;
+      const result = await auditService.queryAuditLogs({ limit: 1000 });
+      const record = result.logs.find((r) => r.auditId === auditId);
+
+      if (!record) {
+        res.status(404).json({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Audit record not found' },
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: record,
       });
     }
   );

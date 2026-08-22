@@ -10,6 +10,7 @@ import { NotificationService } from './notifications/notification.service';
 import { EventNotificationOrchestrator } from './notifications/event-notification.orchestrator';
 import { SSEManager } from './notifications/sse.manager';
 import { AuditService } from './audit/audit.service';
+import { EventAuditOrchestrator } from './audit/event-audit.orchestrator';
 import { WebhookDispatcher } from './notifications/webhook.dispatcher';
 import { RateLimiter } from './security/rate-limiter';
 import { requestIdMiddleware } from './security/request-id.middleware';
@@ -44,6 +45,7 @@ export function createApp(): Express {
   const eventBus = PlatformEventBus.getInstance();
   const approvalRouter = ApprovalRouter.getInstance(eventBus);
   const auditService = AuditService.getInstance();
+  const eventAuditOrchestrator = EventAuditOrchestrator.getInstance(eventBus, auditService);
   const sseManager = SSEManager.getInstance();
   const webhookDispatcher = WebhookDispatcher.getInstance();
   const notificationService = NotificationService.getInstance();
