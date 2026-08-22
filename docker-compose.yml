@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  hr_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hr_core_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=False
+      - DATABASE_URL=postgresql://postgres:postgres_secure_pass@postgres_db:5432/hr_core_db
+      - JWT_SECRET_KEY=prod_jwt_secret_key_change_in_env_file_32bytes
+      - LLM_PROVIDER=mock
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: hr_postgres_db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_secure_pass
+      - POSTGRES_DB=hr_core_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hr_core_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

@@ -1,10 +1,9 @@
-# Python
+# Python & Cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -21,17 +20,35 @@ wheels/
 .installed.cfg
 *.egg
 
+# Virtual Environment & Node
+.venv/
+venv/
+ENV/
+env/
+node_modules/
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+
+# Database & SQLite
+*.db
+*.sqlite
+*.sqlite3
+
 # Testing & Coverage
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Environment variables & secrets
-.env
-.env.local
+# Logs
+*.log
+logs/
 
 # IDEs & System files
 .DS_Store
 .vscode/
 .idea/
 *.swp
+*.swo
