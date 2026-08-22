@@ -155,29 +155,29 @@
             </div>
           </div>
 
-          <!-- Profile Details Panel (Excalidraw Specification) -->
-          <div class="glass-panel" style="padding: 1.8rem; margin-bottom: 1.8rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid var(--panel-border); padding-bottom: 1rem;">
-              <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #10b981); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: white;">
-                  S
+            <!-- Profile Details Panel (Excalidraw Specification) -->
+            <div class="glass-panel" style="padding: 1.8rem; margin-bottom: 1.8rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid var(--panel-border); padding-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <div id="cardAvatar" style="width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #10b981); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: white;">
+                    S
+                  </div>
+                  <div>
+                    <h3 id="profName" style="font-size: 1.25rem;">Sarah Jenkins</h3>
+                    <p style="color: var(--text-muted); font-size: 0.88rem;"><span id="profTitle">Software Engineer</span> • <span id="profDept">Engineering</span></p>
+                  </div>
                 </div>
-                <div>
-                  <h3 style="font-size: 1.25rem;">Sarah Jenkins</h3>
-                  <p style="color: var(--text-muted); font-size: 0.88rem;">Senior Software Engineer • <span id="profDept">Engineering</span></p>
-                </div>
+                <span class="badge badge-success">ACTIVE</span>
               </div>
-              <span class="badge badge-success">ACTIVE</span>
-            </div>
 
-            <div id="profileDetails" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem;">
-              <div><strong>Email:</strong> <span style="color: var(--text-muted);">sarah.jenkins@company.com</span></div>
-              <div><strong>Mobile:</strong> <span style="color: var(--text-muted);">+1 (555) 019-2834</span></div>
-              <div><strong>Company:</strong> <span style="color: var(--text-muted);">DAYFLOW Corp</span></div>
-              <div><strong>Role:</strong> <span id="profRole">EMPLOYEE</span></div>
-              <div><strong>Manager:</strong> <span style="color: var(--text-muted);">Alice Admin</span></div>
-              <div><strong>Location:</strong> <span style="color: var(--text-muted);">San Francisco, CA</span></div>
-            </div>
+              <div id="profileDetails" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem;">
+                <div><strong>Email:</strong> <span id="profEmail" style="color: var(--text-muted);">sarah.jenkins@company.com</span></div>
+                <div><strong>Mobile:</strong> <span id="profMobile" style="color: var(--text-muted);">+1 (555) 019-2834</span></div>
+                <div><strong>Company:</strong> <span id="profCompany" style="color: var(--text-muted);">DAYFLOW Corp</span></div>
+                <div><strong>Role:</strong> <span id="profRole">EMPLOYEE</span></div>
+                <div><strong>Manager:</strong> <span id="profManager" style="color: var(--text-muted);">Alice Admin</span></div>
+                <div><strong>Location:</strong> <span id="profLocation" style="color: var(--text-muted);">San Francisco, CA</span></div>
+              </div>
 
             <!-- About / Interests / Skills Tabs -->
             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-top: 1.5rem; border-top: 1px solid var(--panel-border); padding-top: 1.5rem;">

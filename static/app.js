@@ -233,10 +233,23 @@ async function initApp() {
   try {
     showAppView();
     currentUser = await ApiClient.getProfile();
-    document.getElementById("userNameDisplay").textContent = currentUser.name || "Sarah Jenkins";
-    document.getElementById("userAvatar").textContent = (currentUser.name || "S").charAt(0);
-    document.getElementById("profDept").textContent = currentUser.department || "Engineering";
-    document.getElementById("profRole").textContent = currentUser.role || "EMPLOYEE";
+    const name = currentUser.name || "Sarah Jenkins";
+    const email = currentUser.email || "test.employee@dayflow.com";
+    const dept = currentUser.department || "Engineering";
+    const role = currentUser.role || "EMPLOYEE";
+    const initial = name.charAt(0).toUpperCase();
+
+    document.getElementById("userNameDisplay").textContent = name;
+    document.getElementById("userAvatar").textContent = initial;
+
+    if (document.getElementById("cardAvatar")) document.getElementById("cardAvatar").textContent = initial;
+    if (document.getElementById("profName")) document.getElementById("profName").textContent = name;
+    if (document.getElementById("profEmail")) document.getElementById("profEmail").textContent = email;
+    if (document.getElementById("profDept")) document.getElementById("profDept").textContent = dept;
+    if (document.getElementById("profRole")) document.getElementById("profRole").textContent = role;
+    if (document.getElementById("profTitle")) {
+      document.getElementById("profTitle").textContent = role === "ADMIN" ? "System Administrator" : role === "HR" ? "HR Lead Manager" : "Software Engineer";
+    }
 
     // Load initial data
     await loadLeaves();
