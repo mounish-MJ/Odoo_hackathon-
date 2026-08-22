@@ -44,7 +44,7 @@
 - Prepare Pull Request documentation and maintain sync readiness with upstream base branch.
 
 ### Commit
-`8615804` — `feat(member4): add architecture assessment, ownership map, request tracing, and integration contracts`
+`d5c85b0` — `feat(member4): implement event contract, ingestion layer, and cross-member publish/subscribe plumbing`
 
 ---
 
