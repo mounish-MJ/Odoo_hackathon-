@@ -57,8 +57,8 @@ export abstract class BaseWorkflow<TPayload = Record<string, unknown>, TResult =
     context.error = error;
 
     await this.auditService.recordAudit({
-      userId: context.user?.userId || context.event.metadata.userId,
-      userRole: context.user?.role || context.event.metadata.userRole,
+      userId: context.user?.userId || context.event.actor?.userId || context.event.metadata?.userId || 'system',
+      userRole: context.user?.role || context.event.actor?.role || context.event.metadata?.userRole || 'SYSTEM',
       action: `${this.workflowType}.FAILED`,
       resourceType: 'workflow',
       resourceId: context.workflowId,

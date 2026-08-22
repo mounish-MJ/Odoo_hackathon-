@@ -86,7 +86,14 @@ export class WorkflowEngine {
       workflowId,
       workflowType,
       event,
-      user: event.metadata.userId
+      user: event.actor
+        ? {
+            userId: event.actor.userId,
+            email: event.actor.email || `${event.actor.userId}@dayflow.app`,
+            name: event.actor.userId,
+            role: (event.actor.role as any) || 'EMPLOYEE',
+          }
+        : event.metadata?.userId
         ? {
             userId: event.metadata.userId,
             email: `${event.metadata.userId}@dayflow.app`,

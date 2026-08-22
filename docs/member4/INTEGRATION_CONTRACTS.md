@@ -154,32 +154,220 @@ Member 3 consumes Member 4's platform services via REST APIs and real-time Serve
 
 ---
 
-## 5. Event Envelope Standard
+## 5. Standardized Event Envelope & Canonical Event Schemas
 
-All asynchronous domain events follow the RFC-compliant schema:
+All asynchronous domain events follow the single canonical `StandardEvent` contract:
 
-```json
-{
-  "eventId": "c8a1b32d-94c6-4e59-a218-356b7c2512f4",
-  "eventType": "leave.applied",
-  "producerId": "MEMBER_3_FRONTEND",
-  "idempotencyKey": "idem_894321749",
-  "timestamp": "2026-08-22T06:00:00.000Z",
-  "metadata": {
-    "correlationId": "req_847df3a2",
-    "userId": "user_123",
-    "userRole": "EMPLOYEE",
-    "ipAddress": "127.0.0.1",
-    "timestamp": "2026-08-22T06:00:00.000Z",
-    "version": "1.0"
-  },
-  "payload": {
-    "userId": "user_123",
-    "leaveTypeId": "PAID",
-    "startDate": "2026-09-01",
-    "endDate": "2026-09-02",
-    "days": 2,
-    "reason": "Personal holiday"
-  }
+```typescript
+export interface StandardEvent<T = Record<string, unknown>> {
+  eventId: string;                  // Unique UUID v4
+  eventType: StandardEventType;     // One of the 9 canonical event types
+  timestamp: string;                // ISO-8601 UTC timestamp
+  actor: EventActor;                // { userId, role, email? }
+  source: EventSource;              // e.g. 'MEMBER_1_HR_CORE', 'MEMBER_3_FRONTEND'
+  resourceType: EventResourceType;  // 'leave' | 'attendance' | 'payroll' | 'employee' | 'approval' | 'notification' | 'workflow'
+  resourceId: string;               // ID of the target domain resource
+  correlationId: string;            // Tracing correlation ID
+  version: string;                  // Event schema version ('1.0')
+  payload: T;                       // Strongly typed domain payload
+  aiSignals?: AISignals;            // Optional AI data metadata (cannot bypass auth/approval)
+  idempotencyKey?: string;          // Optional idempotency key for deduplication
 }
 ```
+
+---
+
+### 5.1 Canonical Event Schemas (The 9 Active System Events)
+
+#### 1. `LeaveRequested`
+- **Emitted By**: Member 3 (Frontend) or Member 1 (HR Core)
+- **Resource Type**: `leave`
+- **Payload Schema**:
+  ```json
+  {
+    "userId": "emp_123",
+    "leaveTypeId": "PAID",
+    "startDate": "2026-09-01",
+    "endDate": "2026-09-03",
+    "days": 3,
+    "reason": "Family gathering"
+  }
+  ```
+
+#### 2. `LeaveApproved`
+- **Emitted By**: Member 4 (Orchestrator upon Auto-Approval) or Member 3 / Member 1 (Manager/HR Approval)
+- **Resource Type**: `leave`
+- **Payload Schema**:
+  ```json
+  {
+    "leaveRequestId": "LR-101",
+    "userId": "emp_123",
+    "daysDeducted": 3,
+    "newBalance": 12,
+    "approvedBy": "mgr_456",
+    "approvalType": "MANAGER_APPROVAL"
+  }
+  ```
+
+#### 3. `LeaveRejected`
+- **Emitted By**: Member 3 / Member 1 (Manager or HR rejection)
+- **Resource Type**: `leave`
+- **Payload Schema**:
+  ```json
+  {
+    "leaveRequestId": "LR-101",
+    "userId": "emp_123",
+    "rejectedBy": "mgr_456",
+    "reason": "Critical project release milestone on requested dates"
+  }
+  ```
+
+#### 4. `ApprovalRequested`
+- **Emitted By**: Member 4 (Orchestration approval gate)
+- **Resource Type**: `approval`
+- **Payload Schema**:
+  ```json
+  {
+    "approvalId": "appr_789",
+    "workflowId": "wf_abc123",
+    "workflowType": "leave-request",
+    "requesterId": "emp_123",
+    "assignedRoleId": "MANAGER",
+    "assignedUserId": "mgr_456",
+    "aiRiskScore": 0.45,
+    "aiRationale": "Multi-day leave requested"
+  }
+  ```
+
+#### 5. `ApprovalCompleted`
+- **Emitted By**: Member 4 / Member 3 (Manager/HR decision submitted)
+- **Resource Type**: `approval`
+- **Payload Schema**:
+  ```json
+  {
+    "approvalId": "appr_789",
+    "workflowId": "wf_abc123",
+    "decision": "APPROVED",
+    "deciderId": "mgr_456",
+    "comments": "Approved with team coverage confirmed"
+  }
+  ```
+
+#### 6. `EmployeeUpdated`
+- **Emitted By**: Member 1 (HR Core)
+- **Resource Type**: `employee`
+- **Payload Schema**:
+  ```json
+  {
+    "userId": "emp_123",
+    "departmentId": "engineering",
+    "designation": "Staff Software Engineer",
+    "reportingManagerId": "mgr_999",
+    "updatedFields": ["designation", "reportingManagerId"]
+  }
+  ```
+
+#### 7. `NotificationRequested`
+- **Emitted By**: Any Member
+- **Resource Type**: `notification`
+- **Payload Schema**:
+  ```json
+  {
+    "recipientId": "emp_123",
+    "recipientRole": "EMPLOYEE",
+    "title": "Leave Approved",
+    "message": "Your leave request for 3 days has been approved.",
+    "channels": ["IN_APP", "SSE_STREAM"]
+  }
+  ```
+
+#### 8. `ActionCompleted`
+- **Emitted By**: Member 1 (HR Core) or Member 4 (Platform)
+- **Resource Type**: `workflow`
+- **Payload Schema**:
+  ```json
+  {
+    "actionName": "payroll.batch_mutation",
+    "batchId": "PAY-2026-08",
+    "processedCount": 150,
+    "status": "SUCCESS"
+  }
+  ```
+
+#### 9. `ActionFailed`
+- **Emitted By**: Member 1 or Member 4
+- **Resource Type**: `workflow`
+- **Payload Schema**:
+  ```json
+  {
+    "actionName": "leave.deduct_balance",
+    "resourceId": "LR-101",
+    "error": "Insufficient leave balance",
+    "retryCount": 2
+  }
+  ```
+
+---
+
+## 6. Member Integration Interfaces
+
+### 6.1 Member 1 Publish Interface (TypeScript)
+```typescript
+import { EventIngestionService, StandardEventType } from 'dayflow-orchestration-platform';
+
+const ingestion = EventIngestionService.getInstance();
+
+// Member 1 publishes an event without needing internal orchestration knowledge:
+await ingestion.publishDomainEvent({
+  eventType: StandardEventType.EMPLOYEE_UPDATED,
+  resourceType: 'employee',
+  resourceId: 'emp_123',
+  actor: { userId: 'hr_lead', role: 'HR' },
+  payload: { departmentId: 'engineering', title: 'Lead Architect' },
+  correlationId: 'req_trace_987',
+});
+```
+
+### 6.2 Member 2 AI Signals Hook
+```typescript
+import { EventIngestionService } from 'dayflow-orchestration-platform';
+
+const ingestion = EventIngestionService.getInstance();
+
+// Attach AI signals strictly as data metadata — cannot bypass auth or approval downstream
+const enrichedEvent = ingestion.attachAISignals(rawEvent, {
+  riskScore: 0.15,
+  confidence: 0.92,
+  anomalyScore: 0.04,
+  factors: ['Adequate team capacity', 'Healthy leave balance'],
+  suggestedAction: 'AUTO_APPROVE',
+  modelVersion: 'dayflow-v2-lgbm',
+});
+```
+
+### 6.3 Member 3 Read / Query & Subscription Interface
+```typescript
+import { EventIngestionService, StandardEventType } from 'dayflow-orchestration-platform';
+
+const ingestion = EventIngestionService.getInstance();
+
+// Subscribe to real-time events
+const unsubscribe = ingestion.subscribeToEvent(StandardEventType.LEAVE_APPROVED, (event) => {
+  console.log('Leave was approved for user:', event.payload.userId);
+});
+
+// Query events by correlationId or resourceId
+const sessionEvents = ingestion.getEventsByCorrelationId('req_trace_987');
+const resourceEvents = ingestion.getEventsByResource('leave', 'LR-101');
+```
+
+---
+
+## 7. Idempotency & Deduplication Mechanism
+
+- **Mechanism**: In-flight memory locking + 24-hour TTL completion response cache via `IdempotencyGuard`.
+- **Key Strategy**: `idempotencyKey || eventId`.
+- **Behavior**:
+  - If an event with the same ID / key is currently in-flight, concurrent duplicates are rejected immediately with status `duplicate: true`.
+  - If an event was already processed and stored, subsequent replays return the cached completion acknowledgment safely without repeating state mutations or notification blasts.
+

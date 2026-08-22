@@ -22,6 +22,7 @@ export * from './security/input-validator';
 
 // Orchestration
 export * from './orchestration/event-bus';
+export * from './orchestration/event-ingestion.service';
 export * from './orchestration/workflow-engine';
 export * from './orchestration/approval-router';
 export * from './orchestration/retry-manager';

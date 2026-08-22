@@ -92,7 +92,7 @@ export function createPlatformRouter(
           },
           meta: {
             timestamp: event.timestamp,
-            requestId: event.metadata.correlationId,
+            requestId: event.correlationId || event.metadata?.correlationId || event.eventId,
           },
         });
       } catch (err: unknown) {
@@ -158,7 +158,7 @@ export function createPlatformRouter(
             error: context.error instanceof Error ? context.error.message : context.error,
           },
           meta: {
-            correlationId: event.metadata.correlationId,
+            correlationId: event.correlationId || event.metadata?.correlationId || event.eventId,
             timestamp: new Date().toISOString(),
           },
         });
@@ -185,7 +185,8 @@ export function createPlatformRouter(
       }
 
       // Enforce that requester is either owner or HR/Admin/Manager
-      const isOwner = context.event.metadata.userId === req.user?.userId;
+      const eventOwnerId = context.event.actor?.userId || context.event.metadata?.userId || (context.event.payload as any)?.userId;
+      const isOwner = eventOwnerId === req.user?.userId;
       const isPrivileged = [Role.ADMIN, Role.HR, Role.MANAGER].includes(req.user!.role);
 
       if (!isOwner && !isPrivileged) {

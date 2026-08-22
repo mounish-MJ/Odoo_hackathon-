@@ -275,12 +275,12 @@ export class LeaveRequestWorkflow extends BaseWorkflow<LeaveRequestPayload, Leav
         newBalance: res?.newBalance,
         approvalType: context.approvalStatus,
       },
-      ipAddress: context.event.metadata.ipAddress,
-      userAgent: context.event.metadata.userAgent,
+      ipAddress: context.event.metadata?.ipAddress,
+      userAgent: context.event.metadata?.userAgent,
       status: 'SUCCESS',
       metadata: {
         workflowId: context.workflowId,
-        correlationId: context.event.metadata.correlationId,
+        correlationId: context.event.correlationId || context.event.metadata?.correlationId || context.workflowId,
       },
     });
   }

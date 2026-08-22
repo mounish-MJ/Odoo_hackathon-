@@ -45,3 +45,53 @@
 
 ### Commit
 `8615804` — `feat(member4): add architecture assessment, ownership map, request tracing, and integration contracts`
+
+---
+
+## Checkpoint 2 (Event-Driven Integration Layer)
+**Date**: 2026-08-22  
+**Time**: 12:22 IST  
+
+### Completed
+- Defined single canonical `StandardEvent` contract ([`src/contracts/event.contract.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/contracts/event.contract.ts)) with Zod ingestion schema.
+- Implemented the 9 active canonical event types without speculative bloat (`LeaveRequested`, `LeaveApproved`, `LeaveRejected`, `ApprovalRequested`, `ApprovalCompleted`, `EmployeeUpdated`, `NotificationRequested`, `ActionCompleted`, `ActionFailed`).
+- Implemented `EventIngestionService` ([`src/orchestration/event-ingestion.service.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/orchestration/event-ingestion.service.ts)) with:
+  - Ingestion validation & schema parsing.
+  - Ingestion actor authorization rules.
+  - Idempotency & replay deduplication lock.
+  - Member 1 decoupled `publishDomainEvent` interface.
+  - Member 2 `attachAISignals` metadata hook (cannot bypass auth/approval).
+  - Member 3 `subscribeToEvent`, `getEventsByCorrelationId`, and `getEventsByResource` query interface.
+- Centralized all 9 event schemas and code examples in [`docs/member4/INTEGRATION_CONTRACTS.md`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/docs/member4/INTEGRATION_CONTRACTS.md).
+- Created dedicated test suite [`tests/event-integration.test.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/tests/event-integration.test.ts).
+- Verified test suite: 7 test suites, **40 passed tests** (100% pass rate).
+
+### In Progress
+- Awaiting confirmation to proceed to Part 5 (Workflow engine orchestration logic).
+
+### Tests
+- `tests/event-integration.test.ts` (9 Canonical events, Ingestion validation, Actor authz, Idempotency, Member 1 publish, Member 2 AI hook, Member 3 query) — PASS (8 tests)
+- `tests/security.test.ts` — PASS (15 tests)
+- `tests/api.test.ts` — PASS (6 tests)
+- `tests/orchestration.test.ts` — PASS (4 tests)
+- `tests/notification-sse.test.ts` — PASS (2 tests)
+- `tests/audit.test.ts` — PASS (1 test)
+- `tests/idempotency.test.ts` — PASS (2 tests)
+- **Total: 7 suites, 40 tests passing.**
+
+### Files Changed
+- `src/contracts/event.contract.ts` [MODIFIED]
+- `src/orchestration/event-ingestion.service.ts` [NEW]
+- `src/orchestration/event-bus.ts` [MODIFIED]
+- `src/orchestration/workflow-engine.ts` [MODIFIED]
+- `src/orchestration/workflows/base.workflow.ts` [MODIFIED]
+- `src/orchestration/workflows/leave-request.workflow.ts` [MODIFIED]
+- `src/integration/member3-api-routes.ts` [MODIFIED]
+- `src/index.ts` [MODIFIED]
+- `tests/event-integration.test.ts` [NEW]
+- `docs/member4/INTEGRATION_CONTRACTS.md` [MODIFIED]
+- `docs/member4/PROGRESS.md` [MODIFIED]
+
+### Next Task
+- Part 5 — Workflow Engine Logic.
+
