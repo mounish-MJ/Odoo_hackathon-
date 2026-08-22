@@ -98,6 +98,10 @@ export class PlatformEventBus {
     return this.eventHistory.slice(0, limit);
   }
 
+  public getListenerCount(): number {
+    return this.emitter.eventNames().length;
+  }
+
   public clear(): void {
     this.emitter.removeAllListeners();
     this.eventHistory = [];

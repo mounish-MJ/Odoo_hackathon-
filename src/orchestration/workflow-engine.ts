@@ -433,6 +433,14 @@ export class WorkflowEngine {
     return this.activeContexts.get(workflowId);
   }
 
+  public getRegisteredWorkflowTypes(): string[] {
+    return Array.from(this.workflows.keys());
+  }
+
+  public getActiveExecutionCount(): number {
+    return this.activeContexts.size;
+  }
+
   public clear(): void {
     this.activeContexts.clear();
   }

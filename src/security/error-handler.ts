@@ -38,6 +38,19 @@ export class SecurityErrorHandler {
   }
 
   /**
+   * Returns 404 Not Found with safe message.
+   */
+  public static sendNotFound(res: Response, message = 'Resource not found'): void {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: SecurityErrorHandler.sanitizeMessage(message),
+      },
+    });
+  }
+
+  /**
    * Returns 400 Bad Request with field-level validation issues.
    */
   public static sendValidationError(

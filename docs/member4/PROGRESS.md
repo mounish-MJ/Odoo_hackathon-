@@ -376,11 +376,59 @@
 - `tests/smoke-and-failure-matrix.test.ts` [NEW]
 - `docs/member4/PROGRESS.md` [MODIFIED]
 
+### Commit
+`338863d` — `test(member4): implement comprehensive testing strategy with unit, security, integration, workflow, e2e, and smoke failure matrix`
+
+---
+
+## Checkpoint 11 (Hackathon Deployment Readiness & Reliability Layer)
+**Date**: 2026-08-22  
+**Time**: 14:24 IST  
+
+### Completed
+- Implemented practical reliability features without complex cloud/K8s/Terraform bloat:
+  - **Environment-based safe config**: Strict Zod schema validation in [`src/config/platform.config.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/config/platform.config.ts) reporting diagnostic configuration errors on startup.
+  - **Health & Readiness Endpoints**: Liveness (`/health`, `/api/v1/health`) and deep subsystem readiness (`/ready`, `/api/v1/ready`) in [`src/observability/health.service.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/observability/health.service.ts).
+  - **Structured JSON Logging**: Timestamps, levels, correlation IDs, and PII masking in [`src/observability/logger.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/observability/logger.ts).
+  - **Graceful Shutdown**: Draining active HTTP connections and unhandled rejection protection in [`src/server.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/server.ts).
+  - **Automated Smoke Test**: 10-step platform smoke test in [`scripts/smoke-test.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/scripts/smoke-test.ts) runnable via `npm run test:smoke` (10/10 Passed).
+  - **Deployment Guide**: Comprehensive guide in [`docs/member4/DEPLOYMENT_GUIDE.md`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/docs/member4/DEPLOYMENT_GUIDE.md).
+- Verification: 14 test suites, **92 passed tests** + 10/10 automated smoke tests passing.
+
+### In Progress
+- Final Integration Pull Request preparation.
+
+### Tests
+- `npm run test:smoke` — PASS (10/10 criteria verified)
+- `tests/smoke-and-failure-matrix.test.ts` — PASS (11 tests)
+- `tests/cross-member-integration.test.ts` — PASS (7 tests)
+- `tests/audit-trail.test.ts` — PASS (6 tests)
+- `tests/notification-pipeline.test.ts` — PASS (7 tests)
+- `tests/approval-router.test.ts` — PASS (11 tests)
+- `tests/leave-flow-e2e.test.ts` — PASS (4 tests)
+- `tests/workflow-engine.test.ts` — PASS (6 tests)
+- `tests/event-integration.test.ts` — PASS (8 tests)
+- `tests/api.test.ts` — PASS (6 tests)
+- `tests/orchestration.test.ts` — PASS (4 tests)
+- `tests/security.test.ts` — PASS (15 tests)
+- `tests/notification-sse.test.ts` — PASS (2 tests)
+- `tests/audit.test.ts` — PASS (1 test)
+- `tests/idempotency.test.ts` — PASS (2 tests)
+- **Total: 14 suites, 92 tests passing.**
+
+### Files Changed
+- `src/config/platform.config.ts` [NEW]
+- `src/observability/logger.ts` [NEW]
+- `src/observability/health.service.ts` [NEW]
+- `src/server.ts` [MODIFIED]
+- `scripts/smoke-test.ts` [NEW]
+- `package.json` [MODIFIED]
+- `docs/member4/DEPLOYMENT_GUIDE.md` [NEW]
+- `docs/member4/PROGRESS.md` [MODIFIED]
+
 ### Next Task
 - Final PR Readiness & Summary Walkthrough.
 
-### Commit
-`338863d` — `test(member4): implement comprehensive testing strategy with unit, security, integration, workflow, e2e, and smoke failure matrix`
 
 
 
