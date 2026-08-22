@@ -1,4 +1,4 @@
-# HR Core API Contract Specification (Phase 1, 2, 3 & 4)
+# HR Core API Contract Specification (Phase 1, 2, 3, 4 & 5)
 
 All endpoints return structured JSON responses.
 
@@ -135,18 +135,13 @@ All endpoints return structured JSON responses.
 
 ---
 
-## 7. Future AI Tool Exposure Candidate Specifications
+## 7. AI Tool Execution APIs (Phase 5)
 
-The following operations are exposed via clean Service Layer methods for future AI Tool/Agent integration:
+### `GET /api/v1/ai/tools`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Description**: Returns role-filtered available AI tools and input parameter JSON schemas.
 
-| Candidate Tool | Operation Type | Required Role | Ownership Enforced | Side Effects |
-|---|---|---|---|---|
-| `get_employee_profile` | READ | Verified Roles | Self / HR / Admin | None |
-| `get_attendance` | READ | Verified Roles | Self / HR / Admin | None |
-| `get_weekly_attendance` | READ | Verified Roles | Self / HR / Admin | None |
-| `get_leave_requests` | READ | Verified Roles | Self / HR / Admin | None |
-| `apply_leave` | WRITE | Verified Roles | Self (from JWT) | Creates `PENDING` leave request |
-| `approve_leave` | WRITE | `HR`, `ADMIN` | HR / Admin | Transitions `PENDING -> APPROVED` |
-| `reject_leave` | WRITE | `HR`, `ADMIN` | HR / Admin | Transitions `PENDING -> REJECTED` |
-| `get_payroll` | READ | Verified Roles | Self / HR / Admin | None |
-| `create_payroll` | WRITE | `HR`, `ADMIN` | HR / Admin | Creates payroll record |
+### `POST /api/v1/ai/tools/{tool_name}/execute`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Request Body**: `{"arguments": {...}, "confirmed": boolean}`
+- **Description**: Executes specified AI tool. Enforces active JWT identity context, RBAC, employee isolation, write confirmation contract, and domain service logic.
