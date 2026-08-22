@@ -453,12 +453,8 @@
 - `npm run test:smoke` — PASS (10/10 criteria verified)
 - `npm test` — PASS (14 suites, 92 tests passing)
 
-### Files Changed
-- `scripts/e2e-simulation.ts` [NEW]
-- `src/integration/member3-api-routes.ts` [MODIFIED]
-- `src/orchestration/workflows/leave-request.workflow.ts` [MODIFIED]
-- `package.json` [MODIFIED]
-- `docs/member4/PROGRESS.md` [MODIFIED]
+### Commit
+`4021505` — `feat(member4): complete final engineering review with correlationId tracing and live end-to-end simulation script`
 
 
 
