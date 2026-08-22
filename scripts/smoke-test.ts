@@ -49,14 +49,14 @@ async function runSmokeTests() {
   }
 
   // -------------------------------------------------------------
-  // 2. Database Connection / Readiness Probe
+  // 2. Member 1 Database-Free HTTP Isolation & Readiness Probe
   // -------------------------------------------------------------
   try {
     const res = await request(app).get('/ready');
     const isReady = res.status === 200 && (res.body.status === 'HEALTHY' || res.body.status === 'DEGRADED');
-    recordResult(2, 'Database Connection & Readiness Check', isReady, `DB Type: ${res.body.subsystems?.database?.details?.type}`);
+    recordResult(2, 'Member 1 HTTP Isolation & Subsystem Readiness Check', isReady, `Mode: ${res.body.subsystems?.httpIsolation?.details?.architecture}`);
   } catch (err: any) {
-    recordResult(2, 'Database Connection & Readiness Check', false, err.message);
+    recordResult(2, 'Member 1 HTTP Isolation & Subsystem Readiness Check', false, err.message);
   }
 
   // -------------------------------------------------------------

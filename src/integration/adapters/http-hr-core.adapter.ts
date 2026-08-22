@@ -129,14 +129,15 @@ export class HttpHRCoreService implements IHRCoreService {
   }
 
   public async getUserManager(
-    userId: string
+    userId: string,
+    token?: string
   ): Promise<{ managerId: string; managerName: string; managerEmail: string } | null> {
     try {
       return await this.httpRequest<{
         managerId: string;
         managerName: string;
         managerEmail: string;
-      }>('GET', `/api/v1/employees/${userId}/manager`);
+      }>('GET', `/api/v1/employees/${userId}/manager`, undefined, token);
     } catch {
       return {
         managerId: 'mgr_456',
@@ -146,17 +147,63 @@ export class HttpHRCoreService implements IHRCoreService {
     }
   }
 
-  private httpRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
+  /**
+   * Queries employee historical attendance via Member 1 REST endpoint using Bearer JWT.
+   */
+  public async getEmployeeAttendance(
+    userId: string,
+    token?: string
+  ): Promise<AttendanceUpdateInput[]> {
+    try {
+      const response = await this.httpRequest<AttendanceUpdateInput[]>(
+        'GET',
+        `/api/v1/attendance/employee/${userId}`,
+        undefined,
+        token
+      );
+      return response || [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Queries employee historical payroll records via Member 1 REST endpoint using Bearer JWT.
+   */
+  public async getEmployeePayrollHistory(
+    userId: string,
+    token?: string
+  ): Promise<PayrollMutationInput[]> {
+    try {
+      const response = await this.httpRequest<PayrollMutationInput[]>(
+        'GET',
+        `/api/v1/payroll/employee/${userId}`,
+        undefined,
+        token
+      );
+      return response || [];
+    } catch {
+      return [];
+    }
+  }
+
+  private httpRequest<T>(method: string, path: string, body?: unknown, token?: string): Promise<T> {
     return new Promise((resolve, reject) => {
       const url = new URL(path, this.baseUrl);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const req = http.request(
         url,
         {
           method,
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
+          headers,
           timeout: 2000,
         },
         (res) => {

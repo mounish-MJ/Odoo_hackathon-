@@ -42,6 +42,10 @@ export interface IHRCoreService {
   processPayrollMutation(input: PayrollMutationInput): Promise<{ success: boolean; payrollId: string }>;
 
   // User Profile queries (Member 1)
-  getUserProfile(userId: string): Promise<Record<string, unknown> | null>;
-  getUserManager(userId: string): Promise<{ managerId: string; managerName: string; managerEmail: string } | null>;
+  getUserProfile(userId: string, token?: string): Promise<Record<string, unknown> | null>;
+  getUserManager(userId: string, token?: string): Promise<{ managerId: string; managerName: string; managerEmail: string } | null>;
+
+  // Additive Query operations for AI & Intelligence (Member 1 HTTP REST endpoints with Bearer JWT)
+  getEmployeeAttendance?(userId: string, token?: string): Promise<AttendanceUpdateInput[]>;
+  getEmployeePayrollHistory?(userId: string, token?: string): Promise<PayrollMutationInput[]>;
 }

@@ -15,7 +15,6 @@ const EnvironmentSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
   WEBHOOK_SECRET: z.string().default('dayflow_webhook_signing_secret_xyz'),
   WEBHOOK_MAX_RETRIES: z.coerce.number().default(3),
-  DATABASE_URL: z.string().optional().default('postgresql://postgres:postgres@localhost:5432/hr_core_db'),
   MEMBER1_HR_CORE_URL: z.string().url('MEMBER1_HR_CORE_URL must be a valid URL').default('http://localhost:8000'),
   MEMBER2_AI_ENGINE_URL: z.string().url('MEMBER2_AI_ENGINE_URL must be a valid URL').default('http://localhost:8000/api/v1/ai'),
 });
@@ -61,7 +60,6 @@ class ConfigManager {
       RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS,
       WEBHOOK_SECRET: process.env.WEBHOOK_SECRET,
       WEBHOOK_MAX_RETRIES: process.env.WEBHOOK_MAX_RETRIES,
-      DATABASE_URL: process.env.DATABASE_URL,
       MEMBER1_HR_CORE_URL: process.env.MEMBER1_HR_CORE_URL,
       MEMBER2_AI_ENGINE_URL: process.env.MEMBER2_AI_ENGINE_URL,
     };

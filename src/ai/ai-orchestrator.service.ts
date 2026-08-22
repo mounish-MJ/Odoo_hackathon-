@@ -62,6 +62,22 @@ export class AIOrchestratorService {
   }
 
   /**
+   * Fetches attendance records directly from Member 1 REST API using Bearer JWT and executes AI evaluation.
+   * Ensures 100% database isolation without direct DB access.
+   */
+  public async analyzeAttendanceViaMember1REST(
+    employeeId: string,
+    hrCoreService: import('../contracts/hr-core.contract').IHRCoreService,
+    token?: string
+  ): Promise<AIStructuredInsight<AttendanceAnomalyDetails> | InsufficientDataResult> {
+    if (hrCoreService.getEmployeeAttendance) {
+      const records = await hrCoreService.getEmployeeAttendance(employeeId, token);
+      return this.analyzeAttendance(employeeId, records);
+    }
+    return this.analyzeAttendance(employeeId, []);
+  }
+
+  /**
    * 2. Leave Intelligence Analysis with Concurrency and Burnout Evaluation
    */
   public analyzeLeaves(
