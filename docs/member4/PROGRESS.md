@@ -148,6 +148,49 @@
 ### Commit
 `93c88be` — `feat(member4): wire leave approval workflow end-to-end with attendance updates, HTTP adapters, and frontend state querying`
 
+---
+
+## Checkpoint 6 (Standalone Approval Routing Component)
+**Date**: 2026-08-22  
+**Time**: 13:38 IST  
+
+### Completed
+- Generalized standalone `ApprovalRouter` supporting evaluation of requirement, assigned role/user, current status, decision, comments, and permanent workflow linkage.
+- Implemented canonical approval events: `ApprovalRequested`, `ApprovalApproved`, `ApprovalRejected`.
+- Enforced strict approver authorization and self-approval prevention (`requesterId === deciderId` strictly blocked).
+- Guarded against duplicate decisions and nonexistent/invalid approval requests.
+- Added frontend read endpoints: `GET /api/v1/approvals/pending`, `GET /api/v1/approvals/:approvalId`, and `GET /api/v1/approvals/workflow/:workflowId`.
+- Created dedicated test suite [`tests/approval-router.test.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/tests/approval-router.test.ts) (11 tests).
+- Verified test suite: 10 test suites, **61 passed tests** (100% pass rate).
+
+### In Progress
+- Awaiting confirmation to proceed to Part 8.
+
+### Tests
+- `tests/approval-router.test.ts` (Requirement eval, approval creation, approved/rejected events, self-approval block, role authz, duplicate prevention, linkage queries) — PASS (11 tests)
+- `tests/leave-flow-e2e.test.ts` — PASS (4 tests)
+- `tests/workflow-engine.test.ts` — PASS (6 tests)
+- `tests/event-integration.test.ts` — PASS (8 tests)
+- `tests/api.test.ts` — PASS (6 tests)
+- `tests/orchestration.test.ts` — PASS (4 tests)
+- `tests/security.test.ts` — PASS (15 tests)
+- `tests/notification-sse.test.ts` — PASS (2 tests)
+- `tests/audit.test.ts` — PASS (1 test)
+- `tests/idempotency.test.ts` — PASS (2 tests)
+- **Total: 10 suites, 61 tests passing.**
+
+### Files Changed
+- `src/contracts/approval.contract.ts` [MODIFIED]
+- `src/contracts/event.contract.ts` [MODIFIED]
+- `src/orchestration/approval-router.ts` [MODIFIED]
+- `src/integration/member3-api-routes.ts` [MODIFIED]
+- `tests/approval-router.test.ts` [NEW]
+- `docs/member4/PROGRESS.md` [MODIFIED]
+
+### Next Task
+- Part 8 — Platform Observability, Health Checks, and Verification.
+
+
 
 
 

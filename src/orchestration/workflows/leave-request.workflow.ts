@@ -132,9 +132,12 @@ export class LeaveRequestWorkflow extends BaseWorkflow<LeaveRequestPayload, Leav
     }
 
     // Create pending approval request routed to Manager
-    const approvalRequest = this.approvalRouter.createApprovalRequest({
+    const approvalRequest = await this.approvalRouter.createApprovalRequest({
       workflowId: context.workflowId,
       workflowType: this.workflowType,
+      resourceType: 'leave',
+      resourceId: p.leaveRequestId || `LR-${context.workflowId.substring(0, 8)}`,
+      correlationId: context.event.correlationId || context.event.metadata?.correlationId,
       requesterId: p.userId,
       requesterName: p.userName || 'Employee',
       assignedToRoleId: approvalEval.assignedRole || Role.MANAGER,

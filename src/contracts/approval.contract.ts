@@ -7,12 +7,13 @@ export enum ApprovalStatus {
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
   ESCALATED = 'ESCALATED',
+  EXPIRED = 'EXPIRED',
 }
 
 export interface ApprovalRule {
   ruleId: string;
   workflowType: string;
-  autoApproveRiskThreshold: number; // e.g. < 0.20 risk score means auto-approve
+  autoApproveRiskThreshold: number; // e.g. < 0.25 risk score means auto-approve
   autoApproveConfidenceThreshold: number; // e.g. > 0.85 AI confidence
   requiresManagerApproval: boolean;
   requiresHrApproval: boolean;
@@ -23,6 +24,9 @@ export interface ApprovalRequest {
   approvalId: string;
   workflowId: string;
   workflowType: string;
+  resourceType: string;
+  resourceId: string;
+  correlationId?: string;
   requesterId: string;
   requesterName: string;
   assignedToRoleId: Role;
@@ -43,7 +47,14 @@ export interface ApprovalDecision {
   deciderRole: Role;
   status: ApprovalStatus.APPROVED | ApprovalStatus.REJECTED;
   comments?: string;
-  decidedAt: string;
+  decidedAt?: string;
+}
+
+export interface ApprovalRequirementEvaluation {
+  status: ApprovalStatus;
+  reason: string;
+  assignedRole?: Role;
+  assignedUserId?: string;
 }
 
 export interface ApprovalContract {
@@ -52,7 +63,26 @@ export interface ApprovalContract {
     payload: Record<string, unknown>,
     aiRiskScore?: number,
     aiConfidence?: number
-  ): Promise<{ status: ApprovalStatus; reason: string; assignedRole?: Role; assignedUserId?: string }>;
-  
+  ): Promise<ApprovalRequirementEvaluation>;
+
+  createApprovalRequest(params: {
+    workflowId: string;
+    workflowType: string;
+    resourceType?: string;
+    resourceId?: string;
+    correlationId?: string;
+    requesterId: string;
+    requesterName?: string;
+    assignedToRoleId: Role;
+    assignedToUserId?: string;
+    aiRiskScore?: number;
+    aiConfidence?: number;
+    aiRationale?: string;
+  }): Promise<ApprovalRequest>;
+
   processDecision(decision: ApprovalDecision): Promise<ApprovalRequest>;
+
+  getApprovalById(approvalId: string): ApprovalRequest | undefined;
+  getApprovalByWorkflowId(workflowId: string): ApprovalRequest | undefined;
+  getPendingApprovals(role?: Role, userId?: string): ApprovalRequest[];
 }

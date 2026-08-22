@@ -232,6 +232,67 @@ export function createPlatformRouter(
     }
   );
 
+  router.get(
+    '/approvals/:approvalId',
+    AuthSecurityService.authenticate,
+    (req: AuthenticatedRequest, res: Response) => {
+      const approval = approvalRouter.getApprovalById(req.params.approvalId);
+      if (!approval) {
+        res.status(404).json({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Approval request not found' },
+        });
+        return;
+      }
+
+      // Check authorization (requester, assigned approver, or HR/Admin)
+      const user = req.user!;
+      const isRequester = approval.requesterId === user.userId;
+      const isAssigned = approval.assignedToUserId === user.userId;
+      const isPrivileged = [Role.ADMIN, Role.HR].includes(user.role);
+
+      if (!isRequester && !isAssigned && !isPrivileged) {
+        SecurityErrorHandler.sendForbidden(res, 'You cannot access another user approval record');
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: approval,
+      });
+    }
+  );
+
+  router.get(
+    '/approvals/workflow/:workflowId',
+    AuthSecurityService.authenticate,
+    (req: AuthenticatedRequest, res: Response) => {
+      const approval = approvalRouter.getApprovalByWorkflowId(req.params.workflowId);
+      if (!approval) {
+        res.status(404).json({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'No approval linked to this workflow' },
+        });
+        return;
+      }
+
+      const user = req.user!;
+      const isRequester = approval.requesterId === user.userId;
+      const isAssigned = approval.assignedToUserId === user.userId;
+      const isPrivileged = [Role.ADMIN, Role.HR].includes(user.role);
+
+      if (!isRequester && !isAssigned && !isPrivileged) {
+        SecurityErrorHandler.sendForbidden(res, 'You cannot access another user approval record');
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: approval,
+      });
+    }
+  );
+
   router.post(
     '/approvals/:approvalId/decide',
     AuthSecurityService.authenticate,
