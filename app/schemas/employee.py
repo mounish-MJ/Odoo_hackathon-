@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 from datetime import date, datetime
 from typing import Optional
 from app.models.employee import EmploymentStatus
@@ -19,6 +19,24 @@ class EmployeeBase(BaseModel):
 
 class EmployeeCreate(EmployeeBase):
     user_id: Optional[str] = None
+
+
+class EmployeeSelfUpdate(BaseModel):
+    phone: Optional[str] = Field(None, description="Contact phone number")
+
+    model_config = ConfigDict(extra="forbid")  # Rejects attempts to update restricted fields
+
+
+class EmployeeAdminUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
+    employment_status: Optional[EmploymentStatus] = None
+    manager_id: Optional[str] = None
+
+    model_config = ConfigDict(extra="ignore")
 
 
 class EmployeeRead(EmployeeBase):
