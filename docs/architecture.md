@@ -1,57 +1,66 @@
-# HR Core Platform — Architectural Specification
+# DAYFLOW HRMS — System Architecture & Integration Specification
 
-## Overview
+**Date:** August 22, 2026  
+**System Name:** DAYFLOW — Intelligent HR Operating System  
+**Version:** 1.0.0 Launch Edition
 
-The **HR Core** platform provides a deterministic, secure, and production-ready REST API for all HR operations including Authentication/Authorization, Employee Management, Attendance Tracking, Leave Management, and Payroll.
+---
 
-## Fundamental Architectural Boundary
+## 1. System High-Level Topology
 
-> **EVERY database mutation MUST pass through the HR Core REST APIs.**
-> Direct database access by the Frontend, AI Engine, AI Agents, Tools, or External Services is **STRICTLY FORBIDDEN**.
-
-```text
-  Frontend / Client ─────────────┐
-                                 ↓
-  AI Engine / Agents / Tools ──→ REST API Boundary
-                                 ↓
-                           JWT Auth & Security (get_current_user)
-                                 ↓
-                           RBAC Authorization (require_roles)
-                                 ↓
-                           Self vs Admin Policy (enforce_self_or_admin)
-                                 ↓
-                           Service & Data Repository Layer
-                                 ↓
-                           PostgreSQL Database
-
-  AI Engine  ─── X ───> PostgreSQL (FORBIDDEN)
-  Frontend   ─── X ───> PostgreSQL (FORBIDDEN)
-  AI Tools   ─── X ───> PostgreSQL (FORBIDDEN)
+```
++-------------------------------------------------------------------------+
+|                       Member 3 Frontend SPA                             |
+|             (Glassmorphic Dark UI: static/index.html & app.js)          |
++-------------------------------------------------------------------------+
+                                    |
+                                    | HTTP REST + Bearer JWT
+                                    v
++-------------------------------------------------------------------------+
+|                  Member 2 Backend / AI Gateway                          |
+|             (Python FastAPI Microservice on Port 8001)                  |
+|  - Policy RAG Service & Vector Search (pgvector)                       |
+|  - OpenAI gpt-4o-mini NLU Entity Parser                                 |
+|  - Dual-Stage Leave Decision Engine                                     |
+|  - Statistical Anomaly Intelligence Detector                            |
+|  - 2-Step Action Confirmation Router                                    |
++-------------------------------------------------------------------------+
+                                    |
+                                    | HTTP REST + Audit Headers
+                                    | (X-Request-ID, X-Actor-ID, X-Actor-Type)
+                                    v
++-------------------------------------------------------------------------+
+|                  Member 1 Core HR REST API                              |
+|             (FastAPI Core Server on Port 8000)                          |
++-------------------------------------------------------------------------+
+                                    |
+                                    v
++-------------------------------------------------------------------------+
+|                     PostgreSQL Database (hr_db)                         |
+|             (HR Master Data & pgvector Vector Policy Tables)             |
++-------------------------------------------------------------------------+
 ```
 
 ---
 
-## Technology Stack
+## 2. Hard Security & Architectural Boundaries
 
-- **Backend Framework**: Python 3.10+ & FastAPI 0.110+
-- **Database ORM**: SQLAlchemy 2.0 (Async/Sync engine compatibility, connection pooling, pre-ping)
-- **Database Migration Tool**: Alembic 1.13+
-- **Data Validation & Settings**: Pydantic v2 & Pydantic-Settings
-- **Security & Hashing**: `bcrypt` (72-byte safe password hashing) & PyJWT (`HS256`)
-- **Testing & Verification**: Pytest 9+ & Starlette TestClient
+1. **Browser Network Isolation:** The browser UI communicates strictly with Member 2 Backend at `http://127.0.0.1:8001`. ZERO direct browser network calls are permitted to Member 1 (`port 8000`) or PostgreSQL (`port 5432`).
+2. **Zero Database Credentials in AI/Frontend:** Member 2 holds ZERO Member 1 database credentials. All reads and state modifications route strictly through HTTP REST APIs via `Member1APIAdapter`.
+3. **Member 4 Audit Tracing:** Every HTTP call dispatched from Member 2 to Member 1 includes explicit audit headers:
+   - `Authorization: Bearer <jwt_access_token>`
+   - `X-Request-ID: req_<uuid>`
+   - `X-Actor-ID: DAYFLOW_MEMBER_2`
+   - `X-Actor-Type: AI`
+4. **2-Step Mutation Confirmation:** State-changing AI tool requests return `ACT_PREVIEW` with candidate parameter previews and a `confirm_token`. State execution occurs ONLY after explicit user confirmation (`confirm=True`).
 
 ---
 
-## Role-Based Access Control (RBAC) Architecture
+## 3. Member Integration Matrix
 
-- `EMPLOYEE`: Access self-service endpoints (own profile, own attendance, own leave applications, own payroll). Denied from administrative APIs.
-- `HR`: Access administrative HR endpoints (employee management, leave reviews, payroll overview, attendance records).
-- `ADMIN`: Access all system endpoints (administrative operations, user management, system configuration).
-
-### Server-Side Self vs. Admin Authorization Principle
-> Frontend UI controls are NOT relied upon for security. Permission checks are enforced server-side.
-
-`enforce_self_or_admin(current_user, target_employee_id)` allows access if:
-1. `current_user.role in [UserRole.ADMIN, UserRole.HR]`
-2. `current_user.employee_id == target_employee_id`
-Otherwise returns HTTP 403 Forbidden.
+| Integration Link | Protocol & Auth | Data Payload | Security Guardrail |
+| :--- | :--- | :--- | :--- |
+| **Member 3 → Member 2** | HTTP REST + Bearer JWT | JSON (`CopilotChatRequest`, `CreateLeavePayload`) | Token stored in `localStorage`, sent via `Authorization` header |
+| **Member 2 → Member 1** | HTTP REST + Bearer JWT | Mapped REST DTOs (`/api/v1/leaves`, `/auth/login`) | Audit actor headers attached (`X-Actor-ID`, `X-Actor-Type`) |
+| **Member 2 → Member 4** | Header Injection | `X-Request-ID`, `X-Actor-ID`, `X-Actor-Type` | Correlation tracking across distributed AI requests |
+| **Member 1 → PostgreSQL** | psycopg2 / SQLAlchemy | SQL DDL & DML operations | Master HR state mutation under strict RBAC |
