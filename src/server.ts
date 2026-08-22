@@ -7,6 +7,7 @@ import { PlatformEventBus } from './orchestration/event-bus';
 import { WorkflowEngine } from './orchestration/workflow-engine';
 import { ApprovalRouter } from './orchestration/approval-router';
 import { NotificationService } from './notifications/notification.service';
+import { EventNotificationOrchestrator } from './notifications/event-notification.orchestrator';
 import { SSEManager } from './notifications/sse.manager';
 import { AuditService } from './audit/audit.service';
 import { WebhookDispatcher } from './notifications/webhook.dispatcher';
@@ -41,11 +42,12 @@ export function createApp(): Express {
   // Initialize Core Singletons & Services
   // -------------------------------------------------------------
   const eventBus = PlatformEventBus.getInstance();
-  const approvalRouter = ApprovalRouter.getInstance();
+  const approvalRouter = ApprovalRouter.getInstance(eventBus);
   const auditService = AuditService.getInstance();
   const sseManager = SSEManager.getInstance();
   const webhookDispatcher = WebhookDispatcher.getInstance();
   const notificationService = NotificationService.getInstance();
+  const eventNotificationOrchestrator = EventNotificationOrchestrator.getInstance(eventBus, notificationService);
   const workflowEngine = WorkflowEngine.getInstance(eventBus, approvalRouter);
 
   // Initialize Member 1 & Member 2 Adapters (Mock or Live HTTP based on config)

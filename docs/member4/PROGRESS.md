@@ -187,11 +187,56 @@
 - `tests/approval-router.test.ts` [NEW]
 - `docs/member4/PROGRESS.md` [MODIFIED]
 
-### Next Task
-- Part 8 — Platform Observability, Health Checks, and Verification.
-
 ### Commit
 `3d7090a` — `feat(member4): implement standalone approval routing with self-approval prevention, event emission, and frontend read APIs`
+
+---
+
+## Checkpoint 7 (Event-Driven Notification Component)
+**Date**: 2026-08-22  
+**Time**: 13:54 IST  
+
+### Completed
+- Built event-driven [`EventNotificationOrchestrator`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/notifications/event-notification.orchestrator.ts) wiring domain events (`NotificationRequested`, `LeaveApproved`, `LeaveRejected`, `ApprovalRequested`, `ActionFailed`) directly to notification dispatches with zero embedded business logic.
+- Implemented pluggable provider architecture ([`INotificationProvider`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/contracts/notification.contract.ts)) with in-app inbox, SSE stream, HMAC-signed webhooks, and email provider stub.
+- Enforced automatic PII scrubbing across all notification data payloads (redacting passwords, bank accounts, SSN, and salaries).
+- Isolated channel delivery failures: failed channels report `partialFailure` and log audit events without failing or crashing primary workflows.
+- Created dedicated test suite [`tests/notification-pipeline.test.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/tests/notification-pipeline.test.ts) (7 tests).
+- Verified test suite: 11 test suites, **68 passed tests** (100% pass rate).
+
+### In Progress
+- Awaiting confirmation to proceed to Part 9.
+
+### Tests
+- `tests/notification-pipeline.test.ts` (Event triggers, PII scrubbing, pluggable providers, failure isolation, in-app read management) — PASS (7 tests)
+- `tests/approval-router.test.ts` — PASS (11 tests)
+- `tests/leave-flow-e2e.test.ts` — PASS (4 tests)
+- `tests/workflow-engine.test.ts` — PASS (6 tests)
+- `tests/event-integration.test.ts` — PASS (8 tests)
+- `tests/api.test.ts` — PASS (6 tests)
+- `tests/orchestration.test.ts` — PASS (4 tests)
+- `tests/security.test.ts` — PASS (15 tests)
+- `tests/notification-sse.test.ts` — PASS (2 tests)
+- `tests/audit.test.ts` — PASS (1 test)
+- `tests/idempotency.test.ts` — PASS (2 tests)
+- **Total: 11 suites, 68 tests passing.**
+
+### Files Changed
+- `src/contracts/notification.contract.ts` [MODIFIED]
+- `src/contracts/audit.contract.ts` [MODIFIED]
+- `src/notifications/notification.service.ts` [MODIFIED]
+- `src/notifications/event-notification.orchestrator.ts` [NEW]
+- `src/notifications/providers/in-app.provider.ts` [NEW]
+- `src/notifications/providers/sse.provider.ts` [NEW]
+- `src/notifications/providers/webhook.provider.ts` [NEW]
+- `src/notifications/providers/email.provider.ts` [NEW]
+- `src/server.ts` [MODIFIED]
+- `tests/notification-pipeline.test.ts` [NEW]
+- `docs/member4/PROGRESS.md` [MODIFIED]
+
+### Next Task
+- Part 9 — Comprehensive Platform Verification, Observability, and Final PR Readiness.
+
 
 
 

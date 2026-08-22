@@ -3,19 +3,41 @@ import {
   NotificationContract,
   NotificationPayload,
   NotificationChannel,
+  NotificationDispatchResult,
+  NotificationDeliveryResult,
+  INotificationProvider,
 } from '../contracts/notification.contract';
+import { InAppNotificationProvider } from './providers/in-app.provider';
+import { SSENotificationProvider } from './providers/sse.provider';
+import { WebhookNotificationProvider } from './providers/webhook.provider';
+import { EmailNotificationProvider } from './providers/email.provider';
 import { SSEManager } from './sse.manager';
 import { WebhookDispatcher } from './webhook.dispatcher';
+import { PiiSanitizer } from '../security/pii.sanitizer';
+import { AuditService } from '../audit/audit.service';
 
 export class NotificationService implements NotificationContract {
   private static instance: NotificationService;
-  private notifications: NotificationPayload[] = [];
+  private providers: Map<NotificationChannel, INotificationProvider> = new Map();
+  private inAppProvider: InAppNotificationProvider;
   private sseManager: SSEManager;
   private webhookDispatcher: WebhookDispatcher;
+  private auditService: AuditService;
 
-  constructor(sseManager?: SSEManager, webhookDispatcher?: WebhookDispatcher) {
+  constructor(
+    sseManager?: SSEManager,
+    webhookDispatcher?: WebhookDispatcher,
+    auditService?: AuditService
+  ) {
     this.sseManager = sseManager || SSEManager.getInstance();
     this.webhookDispatcher = webhookDispatcher || WebhookDispatcher.getInstance();
+    this.auditService = auditService || AuditService.getInstance();
+
+    this.inAppProvider = new InAppNotificationProvider();
+    this.registerProvider(this.inAppProvider);
+    this.registerProvider(new SSENotificationProvider(this.sseManager));
+    this.registerProvider(new WebhookNotificationProvider(this.webhookDispatcher));
+    this.registerProvider(new EmailNotificationProvider());
   }
 
   public static getInstance(): NotificationService {
@@ -25,44 +47,88 @@ export class NotificationService implements NotificationContract {
     return NotificationService.instance;
   }
 
+  public registerProvider(provider: INotificationProvider): void {
+    this.providers.set(provider.channel, provider);
+  }
+
   /**
-   * Dispatches a notification across specified channels (In-App, SSE real-time stream, Webhooks).
+   * Dispatches a notification across specified channels with PII scrubbing and error isolation.
    */
-  public async send(
-    payload: NotificationPayload
-  ): Promise<{ success: boolean; notificationId: string }> {
-    const notificationId = payload.notificationId || uuidv4();
+  public async send(payload: NotificationPayload): Promise<NotificationDispatchResult> {
+    const notificationId = payload.notificationId || `notif_${uuidv4().substring(0, 8)}`;
     const createdAt = payload.createdAt || new Date().toISOString();
+
+    // 1. Scrub PII from payload data
+    const sanitizedData = payload.data ? (PiiSanitizer.sanitize(payload.data) as Record<string, unknown>) : undefined;
 
     const fullNotification: NotificationPayload = {
       ...payload,
       notificationId,
+      data: sanitizedData,
       read: false,
       createdAt,
     };
 
-    // 1. In-App persistence
-    if (payload.channels.includes(NotificationChannel.IN_APP)) {
-      this.notifications.unshift(fullNotification);
+    const deliveryResults: Record<string, NotificationDeliveryResult> = {};
+    let overallSuccess = true;
+    let hasFailure = false;
+
+    // 2. Dispatch in parallel across requested channels
+    for (const channel of payload.channels) {
+      const provider = this.providers.get(channel);
+      if (!provider) {
+        deliveryResults[channel] = {
+          channel,
+          success: false,
+          error: `Provider for channel '${channel}' is not registered`,
+          timestamp: new Date().toISOString(),
+        };
+        hasFailure = true;
+        overallSuccess = false;
+        continue;
+      }
+
+      try {
+        const result = await provider.send(fullNotification);
+        deliveryResults[channel] = result;
+        if (!result.success) {
+          hasFailure = true;
+          overallSuccess = false;
+        }
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        deliveryResults[channel] = {
+          channel,
+          success: false,
+          error: errorMsg,
+          timestamp: new Date().toISOString(),
+        };
+        hasFailure = true;
+        overallSuccess = false;
+      }
     }
 
-    // 2. Real-time push via SSE to Member 3 Frontend
-    if (payload.channels.includes(NotificationChannel.SSE_STREAM)) {
-      this.sseManager.sendToUser(payload.recipientId, 'notification', fullNotification);
-    }
-
-    // 3. Webhook Dispatch if enabled
-    if (payload.channels.includes(NotificationChannel.WEBHOOK)) {
-      await this.webhookDispatcher.dispatchEvent(payload.type, {
-        notificationId,
-        recipientId: payload.recipientId,
-        title: payload.title,
-        message: payload.message,
-        data: payload.data,
+    // 3. Record audit event if any delivery channel experienced an issue
+    if (hasFailure) {
+      await this.auditService.recordAudit({
+        userId: payload.recipientId,
+        userRole: payload.recipientRole || 'SYSTEM',
+        action: 'NOTIFICATION.DELIVERY_PARTIAL_FAILURE',
+        resourceType: 'notification',
+        resourceId: notificationId,
+        oldData: { notificationId, channels: payload.channels },
+        newData: { deliveryResults },
+        status: 'FAILURE',
+        failureReason: 'One or more notification channels failed delivery',
       });
     }
 
-    return { success: true, notificationId };
+    return {
+      success: overallSuccess,
+      notificationId,
+      deliveryResults,
+      partialFailure: hasFailure,
+    };
   }
 
   /**
@@ -72,15 +138,13 @@ export class NotificationService implements NotificationContract {
     role: string,
     payload: Omit<NotificationPayload, 'recipientId'>
   ): Promise<{ dispatchedCount: number }> {
-    // Push via SSE to all matching role clients
     const sseSent = this.sseManager.broadcastToRole(role, 'broadcast_alert', payload);
 
-    // Also trigger webhook for role alert
     await this.webhookDispatcher.dispatchEvent(`broadcast.${role.toLowerCase()}`, {
       role,
       title: payload.title,
       message: payload.message,
-      data: payload.data,
+      data: payload.data ? PiiSanitizer.sanitize(payload.data) : undefined,
     });
 
     return { dispatchedCount: sseSent };
@@ -94,40 +158,24 @@ export class NotificationService implements NotificationContract {
     unreadOnly = false,
     limit = 20
   ): Promise<NotificationPayload[]> {
-    return this.notifications
-      .filter((n) => n.recipientId === userId && (!unreadOnly || !n.read))
-      .slice(0, limit);
+    return this.inAppProvider.getNotifications(userId, unreadOnly, limit);
   }
 
   /**
    * Marks a single notification as read.
    */
   public async markAsRead(notificationId: string, userId: string): Promise<boolean> {
-    const notif = this.notifications.find(
-      (n) => n.notificationId === notificationId && n.recipientId === userId
-    );
-    if (notif) {
-      notif.read = true;
-      return true;
-    }
-    return false;
+    return this.inAppProvider.markAsRead(notificationId, userId);
   }
 
   /**
    * Marks all notifications as read for a given user.
    */
   public async markAllAsRead(userId: string): Promise<number> {
-    let count = 0;
-    for (const n of this.notifications) {
-      if (n.recipientId === userId && !n.read) {
-        n.read = true;
-        count++;
-      }
-    }
-    return count;
+    return this.inAppProvider.markAllAsRead(userId);
   }
 
   public clear(): void {
-    this.notifications = [];
+    this.inAppProvider.clear();
   }
 }
