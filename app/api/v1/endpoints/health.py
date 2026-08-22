@@ -26,3 +26,17 @@ async def database_health_check():
         "status": "ok",
         "database": "connected"
     }
+
+
+@router.get("/readiness", status_code=status.HTTP_200_OK)
+async def readiness_check():
+    """Returns comprehensive readiness status verifying app lifecycle and database connectivity."""
+    db_connected = check_database_connection()
+    if not db_connected:
+        raise DatabaseConnectionError(message="Database subsystem is not ready.")
+    return {
+        "status": "ready",
+        "app": settings.APP_NAME,
+        "environment": settings.ENVIRONMENT,
+        "database": "ready"
+    }
