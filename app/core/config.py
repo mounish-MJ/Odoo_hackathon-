@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # LLM & AI Agent Configuration
+    LLM_PROVIDER: str = Field(default="mock", description="LLM provider name: 'mock', 'openai', 'anthropic', 'groq', 'ollama'")
+    LLM_MODEL: str = Field(default="mock-hr-agent", description="LLM model identifier")
+    LLM_API_KEY: str = Field(default="", description="LLM API key (never commit real credentials)")
+    MAX_TOOL_ITERATIONS: int = Field(default=5, description="Maximum tool execution iterations per request")
+    MAX_HISTORY_MESSAGES: int = Field(default=20, description="Maximum conversation history messages retained")
+
     # CORS Origins
     CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:3000", "http://127.0.0.1:8000"]
 

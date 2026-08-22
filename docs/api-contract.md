@@ -1,4 +1,4 @@
-# HR Core API Contract Specification (Phase 1, 2, 3, 4 & 5)
+# HR Core API Contract Specification (Phase 1, 2, 3, 4, 5 & 6)
 
 All endpoints return structured JSON responses.
 
@@ -145,3 +145,28 @@ All endpoints return structured JSON responses.
 - **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
 - **Request Body**: `{"arguments": {...}, "confirmed": boolean}`
 - **Description**: Executes specified AI tool. Enforces active JWT identity context, RBAC, employee isolation, write confirmation contract, and domain service logic.
+
+---
+
+## 8. AI Conversational Agent API (Phase 6)
+
+### `POST /api/v1/ai/chat`
+- **Authentication**: Bearer JWT (`EMPLOYEE`, `HR`, `ADMIN`)
+- **Request Body**:
+  ```json
+  {
+    "message": "Show my attendance for this week",
+    "conversation_id": "optional-session-id",
+    "confirmed": false
+  }
+  ```
+- **Response Body**:
+  ```json
+  {
+    "conversation_id": "session-uuid",
+    "status": "completed",
+    "message": "You were present for 5 of 5 working days this week.",
+    "confirmation": null
+  }
+  ```
+- **Description**: Interacts with the Secure HR Conversational Agent. Resolves user intent, executes role-filtered tools via `ToolExecutionEngine`, manages multi-turn history with user session isolation, handles write confirmations, and returns human-readable responses.
