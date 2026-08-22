@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DAYFLOW — Intelligent HR Operating System</title>
   <link rel="stylesheet" href="/static/styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
   <!-- LOGIN VIEW -->
   <div id="loginView" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem;">
-    <div class="glass-panel" style="width: 100%; max-width: 420px; padding: 2.5rem;">
+    <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 2.5rem;">
       <div style="text-align: center; margin-bottom: 2rem;">
-        <h1 class="brand-logo" style="justify-content: center; font-size: 1.8rem; margin-bottom: 0.5rem;">
+        <h1 class="brand-logo" style="justify-content: center; font-size: 2rem; margin-bottom: 0.5rem;">
           ⚡ <span>DAYFLOW</span>
         </h1>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">Sign in to your HR Operating System</p>
+        <p style="color: var(--text-muted); font-size: 0.92rem;">Sign in to your HR Operating System</p>
       </div>
 
       <div id="loginAlert" class="alert alert-danger" style="display: none;"></div>
@@ -30,10 +30,13 @@
           <label for="loginPassword">Password</label>
           <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required value="TestPassword123!">
         </div>
-        <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.8rem;">
+        <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.85rem;">
           Sign In
         </button>
       </form>
+      <div style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">
+        Don't have an account? <a href="#" style="color: var(--primary-accent); text-decoration: none; font-weight: 600;">Sign Up</a>
+      </div>
     </div>
   </div>
 
@@ -49,7 +52,7 @@
           <div class="user-avatar" id="userAvatar">S</div>
           <span id="userNameDisplay">Sarah Jenkins</span>
         </div>
-        <button id="btnLogout" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Logout</button>
+        <button id="btnLogout" class="btn btn-secondary" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;">Logout</button>
       </div>
     </header>
 
@@ -69,7 +72,14 @@
 
         <!-- TAB: DASHBOARD -->
         <section id="tabDashboard">
-          <h2 style="margin-bottom: 1.5rem;">Employee Dashboard</h2>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.8rem;">
+            <h2>Employee Profile & Dashboard</h2>
+            <div style="display: flex; gap: 0.6rem; align-items: center;">
+              <span class="badge badge-success" title="Present in Office">🟢 Present</span>
+              <span class="badge badge-warning" title="On Leave">✈️ Time Off</span>
+            </div>
+          </div>
+
           <div class="grid-stats">
             <div class="glass-panel stat-card">
               <span class="stat-label">Available Leave</span>
@@ -85,12 +95,77 @@
             </div>
           </div>
 
-          <div class="glass-panel" style="padding: 1.5rem;">
-            <h3 style="margin-bottom: 1rem;">Profile Context</h3>
-            <div id="profileDetails" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-              <div><strong>Department:</strong> <span id="profDept">Engineering</span></div>
+          <!-- Profile Details Panel (Excalidraw Specification) -->
+          <div class="glass-panel" style="padding: 1.8rem; margin-bottom: 1.8rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid var(--panel-border); padding-bottom: 1rem;">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #10b981); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: white;">
+                  S
+                </div>
+                <div>
+                  <h3 style="font-size: 1.25rem;">Sarah Jenkins</h3>
+                  <p style="color: var(--text-muted); font-size: 0.88rem;">Senior Software Engineer • <span id="profDept">Engineering</span></p>
+                </div>
+              </div>
+              <span class="badge badge-success">ACTIVE</span>
+            </div>
+
+            <div id="profileDetails" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem;">
+              <div><strong>Email:</strong> <span style="color: var(--text-muted);">sarah.jenkins@company.com</span></div>
+              <div><strong>Mobile:</strong> <span style="color: var(--text-muted);">+1 (555) 019-2834</span></div>
+              <div><strong>Company:</strong> <span style="color: var(--text-muted);">DAYFLOW Corp</span></div>
               <div><strong>Role:</strong> <span id="profRole">EMPLOYEE</span></div>
-              <div><strong>Status:</strong> <span class="badge badge-success">ACTIVE</span></div>
+              <div><strong>Manager:</strong> <span style="color: var(--text-muted);">Alice Admin</span></div>
+              <div><strong>Location:</strong> <span style="color: var(--text-muted);">San Francisco, CA</span></div>
+            </div>
+
+            <!-- About / Interests / Skills Tabs -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-top: 1.5rem; border-top: 1px solid var(--panel-border); padding-top: 1.5rem;">
+              <div style="display: flex; flex-direction: column; gap: 1.2rem;">
+                <div>
+                  <h4 style="font-size: 0.95rem; margin-bottom: 0.4rem; color: var(--info-accent);">About Me</h4>
+                  <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.5;">
+                    Passionate software architect focused on building distributed cloud applications, AI orchestration systems, and elegant enterprise workflows.
+                  </p>
+                </div>
+                <div>
+                  <h4 style="font-size: 0.95rem; margin-bottom: 0.4rem; color: var(--info-accent);">What I Love About My Job</h4>
+                  <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.5;">
+                    Collaborating across cross-functional engineering teams, solving high-scale architectural bottlenecks, and building intuitive user experiences.
+                  </p>
+                </div>
+                <div>
+                  <h4 style="font-size: 0.95rem; margin-bottom: 0.4rem; color: var(--info-accent);">Interests & Hobbies</h4>
+                  <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.5;">
+                    Open-source contribution, algorithmic problem solving, mountain biking, and digital photography.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Skills & Certifications -->
+              <div style="display: flex; flex-direction: column; gap: 1.2rem;">
+                <div class="glass-panel" style="padding: 1.2rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                    <h4 style="font-size: 0.9rem;">Technical Skills</h4>
+                    <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">+ Add Skills</button>
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                    <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc;">Python</span>
+                    <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc;">FastAPI</span>
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7;">PostgreSQL</span>
+                    <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #7dd3fc;">Docker</span>
+                    <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fcd34d;">AI RAG</span>
+                  </div>
+                </div>
+
+                <div class="glass-panel" style="padding: 1.2rem;">
+                  <h4 style="font-size: 0.9rem; margin-bottom: 0.6rem;">Certifications</h4>
+                  <p style="color: var(--text-muted); font-size: 0.82rem;">
+                    📜 AWS Certified Solutions Architect<br>
+                    📜 Certified Kubernetes Administrator
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -184,8 +259,9 @@
 
         <!-- TAB: PAYROLL -->
         <section id="tabPayroll" style="display: none;">
-          <h2 style="margin-bottom: 1.5rem;">Payroll Summary</h2>
-          <div class="glass-panel" style="padding: 1.5rem;">
+          <h2 style="margin-bottom: 1.5rem;">Payroll Summary & Salary Structure</h2>
+          
+          <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 1.5rem;">
             <h3 style="margin-bottom: 1rem;">Pay Period: <span id="payrollPeriod">2026-08</span></h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
               <div class="stat-card glass-panel">
@@ -203,6 +279,48 @@
               <div class="stat-card glass-panel">
                 <span class="stat-label">Net Salary</span>
                 <span class="stat-value" id="payNet" style="color: #38bdf8;">$7,500.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Excalidraw Salary Breakdown Specification -->
+          <div class="glass-panel" style="padding: 1.5rem;">
+            <h3 style="margin-bottom: 1rem;">Salary Components & Tax Deductions</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+              <div>
+                <h4 style="font-size: 0.95rem; color: var(--info-accent); margin-bottom: 0.8rem;">Earnings Breakdown (Monthly)</h4>
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr><th>Component</th><th>Calculation</th><th>Monthly Amount</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>Basic Salary</td><td>50% of Wage</td><td>$3,500.00</td></tr>
+                      <tr><td>House Rent Allowance (HRA)</td><td>50% of Basic</td><td>$1,750.00</td></tr>
+                      <tr><td>Standard Allowance</td><td>Fixed</td><td>$1,000.00</td></tr>
+                      <tr><td>Performance Bonus</td><td>8.33% Basic</td><td>$583.10</td></tr>
+                      <tr><td>Leave Travel Allowance (LTA)</td><td>8.33% Basic</td><td>$583.10</td></tr>
+                      <tr><td>Fixed Allowance</td><td>Residual</td><td>$83.80</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h4 style="font-size: 0.95rem; color: var(--danger-accent); margin-bottom: 0.8rem;">Deductions & Contributions</h4>
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr><th>Deduction Type</th><th>Rate</th><th>Amount</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>Employee PF Contribution</td><td>12.00% Basic</td><td>$420.00</td></tr>
+                      <tr><td>Employer PF Contribution</td><td>12.00% Basic</td><td>$420.00</td></tr>
+                      <tr><td>Professional Tax (PT)</td><td>Fixed Monthly</td><td>$200.00</td></tr>
+                      <tr><td>Income Tax (TDS)</td><td>Estimated</td><td>$300.00</td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
