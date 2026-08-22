@@ -14,9 +14,8 @@ import { RateLimiter } from './security/rate-limiter';
 import { requestIdMiddleware } from './security/request-id.middleware';
 import { createPlatformRouter } from './integration/member3-api-routes';
 
-// Mocks for Member 1 and Member 2
-import { MockHRCoreService } from './mocks/mock-hr-core';
-import { MockAIEngineService } from './mocks/mock-ai-engine';
+// Adapters for Member 1 and Member 2
+import { AdapterFactory } from './integration/adapters/adapter-factory';
 
 // Workflows
 import { LeaveRequestWorkflow } from './orchestration/workflows/leave-request.workflow';
@@ -49,9 +48,9 @@ export function createApp(): Express {
   const notificationService = NotificationService.getInstance();
   const workflowEngine = WorkflowEngine.getInstance(eventBus, approvalRouter);
 
-  // Initialize Member 1 & Member 2 Adapters/Mocks
-  const hrCoreService = new MockHRCoreService();
-  const aiEngineService = new MockAIEngineService();
+  // Initialize Member 1 & Member 2 Adapters (Mock or Live HTTP based on config)
+  const hrCoreService = AdapterFactory.createHRCoreService();
+  const aiEngineService = AdapterFactory.createAIEngineService();
 
   // Register Workflows
   workflowEngine.registerWorkflow(

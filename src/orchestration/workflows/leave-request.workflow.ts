@@ -32,6 +32,7 @@ export interface LeaveRequestResult {
   aiConfidence?: number;
   approvedBy?: string;
   approvalStatus: ApprovalStatus;
+  attendanceUpdated?: boolean;
 }
 
 export class LeaveRequestWorkflow extends BaseWorkflow<LeaveRequestPayload, LeaveRequestResult> {
@@ -203,6 +204,14 @@ export class LeaveRequestWorkflow extends BaseWorkflow<LeaveRequestPayload, Leav
       'Approved via Dayflow Orchestration Engine'
     );
 
+    // 3. Update attendance/calendar in Member 1 Core
+    const attendanceResult = await this.hrCoreService.recordAttendance({
+      userId: p.userId,
+      date: p.startDate,
+      status: 'LEAVE',
+      notes: `Approved leave: ${p.startDate} to ${p.endDate} (${p.days} days)`,
+    });
+
     return {
       leaveRequestId,
       status: 'APPROVED',
@@ -210,6 +219,7 @@ export class LeaveRequestWorkflow extends BaseWorkflow<LeaveRequestPayload, Leav
       newBalance: balanceResult.newBalance,
       approvedBy: approverName,
       approvalStatus: context.approvalStatus || ApprovalStatus.APPROVED,
+      attendanceUpdated: attendanceResult.success,
     };
   }
 
@@ -222,7 +232,8 @@ export class LeaveRequestWorkflow extends BaseWorkflow<LeaveRequestPayload, Leav
     return (
       actionResult.status === 'APPROVED' &&
       actionResult.daysDeducted === context.event.payload.days &&
-      typeof actionResult.newBalance === 'number'
+      typeof actionResult.newBalance === 'number' &&
+      actionResult.attendanceUpdated === true
     );
   }
 
@@ -246,6 +257,21 @@ export class LeaveRequestWorkflow extends BaseWorkflow<LeaveRequestPayload, Leav
         leaveRequestId: res?.leaveRequestId,
         status: 'APPROVED',
         newBalance: res?.newBalance,
+      },
+    });
+
+    // Notify HR of the approved leave and calendar update
+    await this.notificationService.send({
+      recipientId: 'HR_POOL',
+      recipientRole: Role.HR,
+      type: NotificationType.LEAVE_STATUS,
+      title: 'Employee Leave Approved',
+      message: `Leave approved for ${p.userName || p.userId} (${p.days} days from ${p.startDate} to ${p.endDate}). Attendance marked.`,
+      channels: [NotificationChannel.IN_APP, NotificationChannel.SSE_STREAM],
+      data: {
+        workflowId: context.workflowId,
+        userId: p.userId,
+        leaveRequestId: res?.leaveRequestId,
       },
     });
   }

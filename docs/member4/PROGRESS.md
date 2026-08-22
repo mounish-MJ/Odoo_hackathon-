@@ -101,11 +101,50 @@
 - `tests/workflow-engine.test.ts` [NEW]
 - `docs/member4/PROGRESS.md` [MODIFIED]
 
-### Next Task
-- Part 6 — Wiring specific Leave Request workflow.
-
 ### Commit
 `e07e3bf` — `feat(member4): implement core workflow engine with state machine validation, idempotency, and failure handling`
+
+---
+
+## Checkpoint 5 (Leave Approval Workflow Wired End-to-End)
+**Date**: 2026-08-22  
+**Time**: 13:31 IST  
+
+### Completed
+- Instantiated end-to-end Leave Approval scenario on the Part 5 Workflow Engine (`LeaveRequested` → validation → auth → AI scoring → approval gate → balance deduction → attendance/calendar update → notifications → audit).
+- Added attendance/calendar status updates on `LeaveApproved` (`status: 'LEAVE'`).
+- Implemented real HTTP adapters ([`HttpHRCoreService`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/integration/adapters/http-hr-core.adapter.ts) & [`HttpAIEngineService`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/integration/adapters/http-ai-engine.adapter.ts)) alongside in-memory mock adapters via [`AdapterFactory`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/src/integration/adapters/adapter-factory.ts).
+- Exposed workflow state queries on `GET /api/v1/workflows/:workflowId` for Member 3 frontend.
+- Created dedicated end-to-end test suite [`tests/leave-flow-e2e.test.ts`](file:///c:/Users/Asus/OneDrive/Documents/MEMBER%204%20ORCHESTRATION/tests/leave-flow-e2e.test.ts) covering auto-approvals, manager approvals, manager rejections, and balance checks.
+- Verified test suite: 9 test suites, **50 passed tests** (100% pass rate).
+
+### In Progress
+- Awaiting confirmation to proceed to Part 7.
+
+### Tests
+- `tests/leave-flow-e2e.test.ts` (Auto-approval, manager routing, manager rejection, insufficient balance, frontend state query) — PASS (4 tests)
+- `tests/workflow-engine.test.ts` — PASS (6 tests)
+- `tests/event-integration.test.ts` — PASS (8 tests)
+- `tests/api.test.ts` — PASS (6 tests)
+- `tests/orchestration.test.ts` — PASS (4 tests)
+- `tests/security.test.ts` — PASS (15 tests)
+- `tests/notification-sse.test.ts` — PASS (2 tests)
+- `tests/audit.test.ts` — PASS (1 test)
+- `tests/idempotency.test.ts` — PASS (2 tests)
+- **Total: 9 suites, 50 tests passing.**
+
+### Files Changed
+- `src/orchestration/workflows/leave-request.workflow.ts` [MODIFIED]
+- `src/integration/adapters/http-hr-core.adapter.ts` [NEW]
+- `src/integration/adapters/http-ai-engine.adapter.ts` [NEW]
+- `src/integration/adapters/adapter-factory.ts` [NEW]
+- `src/server.ts` [MODIFIED]
+- `tests/leave-flow-e2e.test.ts` [NEW]
+- `docs/member4/PROGRESS.md` [MODIFIED]
+
+### Next Task
+- Part 7 — Full Platform Integration & Operational Hardening.
+
 
 
 
